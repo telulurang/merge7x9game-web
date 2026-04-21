@@ -4,394 +4,379 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🍉 수박게임</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyAblm8T1_tygTGNm27GMv9pyOGHNX3JA7c",
+      authDomain: "watermelon-game-f7569.firebaseapp.com",
+      projectId: "watermelon-game-f7569",
+      storageBucket: "watermelon-game-f7569.firebasestorage.app",
+      messagingSenderId: "44347440824",
+      appId: "1:44347440824:web:dd7c9d5765c2a8dc23fe4d"
+    });
+    window.db = firebase.firestore();
+  </script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      min-height: 100vh;
-      background: linear-gradient(135deg, #fbc2eb 0%, #ffeaa7 100%);
-      display: flex; align-items: center; justify-content: center;
-      padding: 10px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height:100vh;
+      background:linear-gradient(135deg,#fbc2eb,#ffeaa7);
+      display:flex; align-items:center; justify-content:center;
+      padding:10px;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     }
-    .container {
-      background: white; border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      padding: 15px; width: 420px; max-width: 100%;
+    .wrap {
+      background:white; border-radius:20px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.3);
+      padding:15px; width:420px; max-width:100%;
     }
-    h1 { text-align: center; font-size: 1.5em; margin-bottom: 10px; color: #333; }
+    h1 { text-align:center; font-size:1.4em; margin-bottom:10px; color:#333; }
+
+    /* 점수+버튼 행 */
     .score-row {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 10px; gap: 8px;
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:10px; gap:6px;
     }
-    .score-display { text-align: center; background: #d4edda; padding: 8px 16px; border-radius: 10px; flex-shrink: 0; }
-    .score-label { font-size: 0.8em; color: #666; }
-    .score-value { font-size: 1.5em; font-weight: bold; color: #28a745; }
-    .side-btns { display: flex; flex-direction: column; gap: 5px; }
-    .side-btn {
-      padding: 6px 10px; border: none; border-radius: 8px;
-      font-size: 0.8em; font-weight: bold; cursor: pointer;
-      transition: all 0.2s; white-space: nowrap;
+    .side-btns { display:flex; flex-direction:column; gap:5px; }
+    .score-box { text-align:center; background:#d4edda; padding:8px 16px; border-radius:10px; flex-shrink:0; }
+    .score-label { font-size:0.75em; color:#666; }
+    .score-value { font-size:1.5em; font-weight:bold; color:#28a745; }
+    .sbtn {
+      padding:6px 10px; border:none; border-radius:8px;
+      font-size:0.78em; font-weight:bold; cursor:pointer;
+      transition:all .2s; white-space:nowrap; color:white;
     }
-    .side-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
-    .new-btn  { background: linear-gradient(135deg,#28a745,#17a2b8); color: white; }
-    .end-btn  { background: linear-gradient(135deg,#dc3545,#fd7e14); color: white; }
-    .rank-btn { background: linear-gradient(135deg,#f59e0b,#ef4444); color: white; padding: 12px 10px; }
+    .sbtn:hover { transform:translateY(-1px); box-shadow:0 3px 8px rgba(0,0,0,.15); }
+    .btn-new  { background:linear-gradient(135deg,#28a745,#17a2b8); }
+    .btn-end  { background:linear-gradient(135deg,#dc3545,#fd7e14); }
+    .btn-rank { background:linear-gradient(135deg,#f59e0b,#ef4444); padding:12px 10px; }
 
-    .alert-box { border-radius: 10px; padding: 12px; margin-bottom: 10px; text-align: center; display: none; }
-    .alert-box.gameover { background: #f8d7da; border: 2px solid #f5c6cb; }
-    .alert-box.gameover p { color: #721c24; font-weight: bold; }
-    .alert-box.win { background: #fff3cd; border: 2px solid #ffc107; }
-    .alert-box.win p { color: #856404; font-weight: bold; }
-
-    .name-input-row { display: flex; gap: 6px; margin-top: 8px; justify-content: center; }
+    /* 알림 박스 */
+    .alert { border-radius:10px; padding:12px; margin-bottom:10px; text-align:center; display:none; }
+    .alert.red  { background:#f8d7da; border:2px solid #f5c6cb; }
+    .alert.red p  { color:#721c24; font-weight:bold; }
+    .alert.yel  { background:#fff3cd; border:2px solid #ffc107; }
+    .alert.yel p  { color:#856404; font-weight:bold; }
+    .name-row { display:flex; gap:6px; margin-top:8px; justify-content:center; }
     .name-input {
-      padding: 6px 10px; border: 2px solid #ccc; border-radius: 8px;
-      font-size: 0.9em; width: 180px; outline: none;
+      padding:6px 10px; border:2px solid #ccc; border-radius:8px;
+      font-size:.9em; width:180px; outline:none;
     }
-    .name-input:focus { border-color: #28a745; }
-    .name-submit-btn {
-      padding: 6px 14px; background: #28a745; color: white;
-      border: none; border-radius: 8px; font-size: 0.9em;
-      font-weight: bold; cursor: pointer;
+    .name-input:focus { border-color:#28a745; }
+    .name-btn {
+      padding:6px 14px; background:#28a745; color:white;
+      border:none; border-radius:8px; font-size:.9em;
+      font-weight:bold; cursor:pointer;
     }
-    .name-submit-btn:hover { background: #218838; }
-    .name-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .name-btn:hover { background:#218838; }
+    .name-btn:disabled { opacity:.5; cursor:not-allowed; }
 
+    /* 캔버스 */
     #gameCanvas {
-      border: 4px solid #333; border-radius: 10px;
-      cursor: pointer; display: block; margin: 0 auto 10px;
-      touch-action: none; max-width: 100%;
+      border:4px solid #333; border-radius:10px;
+      cursor:pointer; display:block; margin:0 auto 10px;
+      touch-action:none; max-width:100%;
     }
-    button.main-btn {
-      width: 100%; padding: 12px;
-      background: linear-gradient(135deg, #28a745 0%, #17a2b8 100%);
-      color: white; border: none; border-radius: 10px;
-      font-size: 1em; font-weight: bold; cursor: pointer; transition: all 0.3s;
-      margin-bottom: 10px;
-    }
-    button.main-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
 
-    /* 간단 랭킹 (하단) */
-    .ranking { background: #f8f9fa; border-radius: 12px; padding: 12px; }
-    .ranking h2 { text-align: center; font-size: 1em; color: #555; margin-bottom: 8px; }
-    .ranking-list { list-style: none; }
-    .ranking-list li {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 5px 8px; border-radius: 8px; margin-bottom: 4px;
-      font-size: 0.88em; background: white;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    /* 새게임 큰 버튼 */
+    .main-btn {
+      width:100%; padding:12px;
+      background:linear-gradient(135deg,#28a745,#17a2b8);
+      color:white; border:none; border-radius:10px;
+      font-size:1em; font-weight:bold; cursor:pointer;
+      transition:all .3s; margin-bottom:10px;
     }
-    .ranking-list li.my-record { background: #fffde7; border: 1px solid #ffd54f; }
-    .rank-medal { font-size: 1.1em; width: 28px; flex-shrink: 0; }
-    .rank-name { flex: 1; font-weight: bold; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .rank-score { font-weight: bold; color: #28a745; margin: 0 8px; white-space: nowrap; }
-    .rank-date { color: #aaa; font-size: 0.8em; white-space: nowrap; }
-    .rank-empty { text-align: center; color: #bbb; font-size: 0.85em; padding: 6px 0; }
-    .rank-divider { text-align: center; color: #bbb; background: none !important; box-shadow: none !important; padding: 2px 0; }
+    .main-btn:hover { transform:translateY(-2px); box-shadow:0 5px 15px rgba(0,0,0,.2); }
 
-    .instructions { text-align: center; color: #666; font-size: 0.82em; margin-top: 8px; line-height: 1.4; }
-
-    /* 랭킹 팝업 */
-    .popup-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
-      display: none; align-items: center; justify-content: center; z-index: 1000;
+    /* 하단 랭킹 */
+    .ranking { background:#f8f9fa; border-radius:12px; padding:12px; }
+    .ranking h2 { text-align:center; font-size:1em; color:#555; margin-bottom:8px; }
+    .rlist { list-style:none; }
+    .rlist li {
+      display:flex; align-items:center; gap:6px;
+      padding:5px 8px; border-radius:8px; margin-bottom:4px;
+      font-size:.85em; background:white;
+      box-shadow:0 1px 3px rgba(0,0,0,.08);
     }
-    .popup-overlay.show { display: flex; }
+    .rlist li.mine { background:#fffde7; border:1px solid #ffd54f; }
+    .rlist li.sep  { background:none!important; box-shadow:none!important; justify-content:center; color:#bbb; }
+    .r-medal { width:26px; flex-shrink:0; text-align:center; }
+    .r-name  { flex:1; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .r-score { font-weight:bold; color:#28a745; white-space:nowrap; }
+    .r-date  { color:#aaa; font-size:.78em; white-space:nowrap; }
+    .r-empty { text-align:center; color:#bbb; padding:8px 0; }
+
+    .instructions { text-align:center; color:#666; font-size:.82em; margin-top:8px; line-height:1.4; }
+
+    /* 팝업 공통 */
+    .overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,.55);
+      display:none; align-items:center; justify-content:center; z-index:1000;
+    }
+    .overlay.show { display:flex; }
     .popup-box {
-      background: white; border-radius: 20px; padding: 20px;
-      width: 360px; max-width: 92vw; max-height: 80vh; overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      background:white; border-radius:20px; padding:20px;
+      width:360px; max-width:92vw; max-height:80vh; overflow-y:auto;
+      box-shadow:0 20px 60px rgba(0,0,0,.3);
     }
-    .popup-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .popup-title { font-size: 1.2em; font-weight: bold; color: #333; }
-    .close-btn {
-      background: #f0f0f0; border: none; border-radius: 50%;
-      width: 32px; height: 32px; font-size: 1.1em; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
+    .popup-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+    .popup-title { font-size:1.15em; font-weight:bold; color:#333; }
+    .close-x {
+      background:#f0f0f0; border:none; border-radius:50%;
+      width:32px; height:32px; font-size:1.1em; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
     }
-    .close-btn:hover { background: #ddd; }
-    .rank-table { width: 100%; border-collapse: collapse; }
-    .rank-table th {
-      background: linear-gradient(135deg, #fbc2eb, #ffeaa7);
-      padding: 8px 6px; font-size: 0.85em; color: #555; border-bottom: 2px solid #eee;
+    .close-x:hover { background:#ddd; }
+
+    /* 랭킹 팝업 테이블 */
+    .rtable { width:100%; border-collapse:collapse; }
+    .rtable th {
+      background:linear-gradient(135deg,#fbc2eb,#ffeaa7);
+      padding:8px 6px; font-size:.83em; color:#555;
+      border-bottom:2px solid #eee;
     }
-    .rank-table td { padding: 8px 6px; font-size: 0.85em; text-align: center; border-bottom: 1px solid #f0f0f0; }
-    .rank-table tr.my-row td { background: #fffde7; font-weight: bold; }
-    .rank-table tr:hover td { background: #fafafa; }
-    .my-rank-sep { text-align: center; color: #bbb; padding: 4px; font-size: 0.85em; }
+    .rtable td { padding:8px 6px; font-size:.83em; text-align:center; border-bottom:1px solid #f0f0f0; }
+    .rtable tr.mine-row td { background:#fffde7; font-weight:bold; }
+    .my-sep { text-align:center; color:#bbb; padding:4px; font-size:.85em; }
+
+    /* 확인 팝업 */
+    .confirm-box {
+      background:white; border-radius:16px; padding:24px;
+      width:280px; text-align:center;
+      box-shadow:0 20px 60px rgba(0,0,0,.3);
+    }
+    .confirm-box p { font-size:1.05em; color:#333; margin-bottom:20px; }
+    .confirm-btns { display:flex; gap:12px; justify-content:center; }
+    .c-no  { padding:10px 22px; border:none; border-radius:8px; background:#e5e7eb; color:#333; font-size:.9em; font-weight:bold; cursor:pointer; }
+    .c-yes { padding:10px 22px; border:none; border-radius:8px; background:linear-gradient(135deg,#dc3545,#fd7e14); color:white; font-size:.9em; font-weight:bold; cursor:pointer; }
   </style>
 </head>
 <body>
-<div class="container">
+<div class="wrap">
   <h1>🍉 수박게임</h1>
+
+  <!-- 점수+버튼 -->
   <div class="score-row">
     <div class="side-btns">
-      <button class="side-btn new-btn" id="resetBtn2">🔄 새게임</button>
-      <button class="side-btn end-btn" id="endBtn">⏹ 종료</button>
+      <button class="sbtn btn-new" id="resetBtn2">🔄 새게임</button>
+      <button class="sbtn btn-end" id="endBtn">⏹ 종료</button>
     </div>
-    <div class="score-display">
+    <div class="score-box">
       <div class="score-label">점수</div>
       <div class="score-value" id="score">0</div>
     </div>
     <div class="side-btns">
-      <button class="side-btn rank-btn" id="rankBtn">🏆 랭킹</button>
+      <button class="sbtn btn-rank" id="rankBtn">🏆 랭킹</button>
     </div>
   </div>
 
-  <div id="winBox" class="alert-box win">
-    <p>🎉 수박 완성! 최종 점수: <span id="winScore">0</span>점!</p>
-    <div class="name-input-row">
-      <input id="winName" class="name-input" placeholder="닉네임 입력 (최대 10자)" maxlength="10">
-      <button class="name-submit-btn" id="winSubmit">등록 🏆</button>
+  <!-- 게임오버 -->
+  <div id="gameOverBox" class="alert red">
+    <p>게임 오버! 최종 점수: <span id="finalScore">0</span>점</p>
+    <div class="name-row">
+      <input id="overName" class="name-input" placeholder="닉네임 입력 (최대 10자)" maxlength="10">
+      <button class="name-btn" id="overSubmit">등록 🏆</button>
     </div>
   </div>
-  <div id="gameOverBox" class="alert-box gameover">
-    <p>게임 오버! 최종 점수: <span id="finalScore">0</span>점</p>
-    <div class="name-input-row">
-      <input id="overName" class="name-input" placeholder="닉네임 입력 (최대 10자)" maxlength="10">
-      <button class="name-submit-btn" id="overSubmit">등록 🏆</button>
+
+  <!-- 수박 완성 -->
+  <div id="winBox" class="alert yel">
+    <p>🎉 수박 완성! 최종 점수: <span id="winScore">0</span>점!</p>
+    <div class="name-row">
+      <input id="winName" class="name-input" placeholder="닉네임 입력 (최대 10자)" maxlength="10">
+      <button class="name-btn" id="winSubmit">등록 🏆</button>
     </div>
   </div>
 
   <canvas id="gameCanvas" width="400" height="450"></canvas>
   <button class="main-btn" id="resetBtn">새 게임</button>
 
+  <!-- 하단 랭킹 -->
   <div class="ranking">
     <h2>🏆 랭킹 TOP 10</h2>
-    <ul class="ranking-list" id="rankingList"></ul>
+    <ul class="rlist" id="rlist"></ul>
   </div>
-  <div class="instructions">💡 클릭해서 과일을 떨어뜨리세요!<br/>같은 과일끼리 합쳐집니다</div>
+  <div class="instructions">💡 클릭해서 과일을 떨어뜨리세요!<br>같은 과일끼리 합쳐집니다</div>
 </div>
 
 <!-- 종료 확인 팝업 -->
-<div id="confirmPopup" style="
-  display:none; position:fixed; inset:0;
-  background:rgba(0,0,0,0.55);
-  align-items:center; justify-content:center; z-index:2000;">
-  <div style="background:white; border-radius:16px; padding:24px; width:280px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-    <p style="font-size:1.1em; color:#333; margin-bottom:20px;">게임을 종료하시겠어요?</p>
-    <div style="display:flex; gap:12px; justify-content:center;">
-      <button id="confirmNo"  style="padding:10px 22px; border:none; border-radius:8px; background:#e5e7eb; color:#333; font-size:0.95em; font-weight:bold; cursor:pointer;">취소</button>
-      <button id="confirmYes" style="padding:10px 22px; border:none; border-radius:8px; background:linear-gradient(135deg,#dc3545,#fd7e14); color:white; font-size:0.95em; font-weight:bold; cursor:pointer;">종료</button>
+<div class="overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <p>게임을 종료하시겠어요?</p>
+    <div class="confirm-btns">
+      <button class="c-no"  id="confirmNo">취소</button>
+      <button class="c-yes" id="confirmYes">종료</button>
     </div>
   </div>
 </div>
-<div class="popup-overlay" id="rankPopup">
+
+<!-- 랭킹 팝업 -->
+<div class="overlay" id="rankPopup">
   <div class="popup-box">
-    <div class="popup-header">
+    <div class="popup-head">
       <div class="popup-title">🏆 전체 랭킹</div>
-      <button class="close-btn" id="closePopup">×</button>
+      <button class="close-x" id="closeRank">×</button>
     </div>
-    <div id="popupBody"></div>
+    <div id="rankBody"></div>
   </div>
 </div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreEl      = document.getElementById('score');
-const finalScoreEl = document.getElementById('finalScore');
-const winScoreEl   = document.getElementById('winScore');
-const gameOverBox  = document.getElementById('gameOverBox');
-const winBox       = document.getElementById('winBox');
-const resetBtn  = document.getElementById('resetBtn');
-const resetBtn2 = document.getElementById('resetBtn2');
-const endBtn    = document.getElementById('endBtn');
-const rankBtn   = document.getElementById('rankBtn');
-const rankingList  = document.getElementById('rankingList');
-const rankPopup    = document.getElementById('rankPopup');
-const popupBody    = document.getElementById('popupBody');
-
-const W = 400, H = 450, GRAVITY = 0.4, GAMEOVER_Y = 100;
-
-const fruitTypes = [
-  { emoji:'🍒', radius:15, points:1  },
-  { emoji:'🍋‍🟩', radius:20, points:3  },
-  { emoji:'🍇', radius:20, points:6  },
-  { emoji:'🍊', radius:25, points:10 },
-  { emoji:'🍋', radius:30, points:15 },
-  { emoji:'🍎', radius:35, points:21 },
-  { emoji:'🍑', radius:40, points:28 },
-  { emoji:'🍍', radius:55, points:36 },
-  { emoji:'🥥', radius:60, points:45 },
-  { emoji:'🍈', radius:70, points:55 },
-  { emoji:'🍉', radius:80, points:75 },
-];
-
 // ── Firebase 랭킹 ──────────────────────────────────────
-function getDB() {
-  if (window.db) return window.db;
+async function fbSave(score, name) {
   try {
-    window.db = firebase.firestore();
-    return window.db;
-  } catch(e) {
-    console.error('DB 초기화 실패', e);
-    return null;
-  }
+    const now = new Date();
+    const date = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const ref = await window.db.collection('rankings').add({
+      score, name: name||'익명', date,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return ref.id;
+  } catch(e) { return null; }
 }
 
-async function saveRanking(score, name) {
-  const db = getDB();
-  if (!db) return { myId: null };
-  const now = new Date();
-  const dateStr = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  const entry = { score, name: name || '익명', date: dateStr, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+async function fbLoad() {
   try {
-    const ref = await db.collection('rankings').add(entry);
-    return { myId: ref.id };
-  } catch(e) {
-    console.error('저장 실패', e);
-    return { myId: null };
-  }
+    const snap = await window.db.collection('rankings')
+      .orderBy('score','desc').limit(50).get();
+    return snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  } catch(e) { return []; }
 }
 
-async function loadRanking() {
-  const db = getDB();
-  if (!db) return [];
-  try {
-    const snap = await db.collection('rankings')
-      .orderBy('score', 'desc')
-      .limit(50)
-      .get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch(e) {
-    console.error('불러오기 실패', e);
-    return [];
-  }
-}
-
+// ── 랭킹 렌더 ─────────────────────────────────────────
 let myRankId = null;
+const medals = ['🥇','🥈','🥉'];
 
-// ── 랭킹 목록 렌더 (하단 간단 표시) ────────────────────
 async function renderRanking() {
-  const list = await loadRanking();
-  const medals = ['🥇','🥈','🥉'];
-  if (!list.length) { rankingList.innerHTML = '<li class="rank-empty">아직 기록이 없어요!</li>'; return; }
-
-  const top10  = list.slice(0, 10);
-  const myIdx  = myRankId ? list.findIndex(r => r.id === myRankId) : -1;
-
-  let html = top10.map((r, i) => {
-    const mine = myRankId && r.id === myRankId;
-    return `<li class="${mine ? 'my-record' : ''}">
-      <span class="rank-medal">${medals[i] ?? (i+1)}</span>
-      <span class="rank-name">${r.name}</span>
-      <span class="rank-score">${r.score.toLocaleString()}점</span>
-      <span class="rank-date">${r.date}${mine ? ' 👈' : ''}</span>
+  const list = await fbLoad();
+  const rlist = document.getElementById('rlist');
+  if (!list.length) { rlist.innerHTML='<li class="r-empty">아직 기록이 없어요!</li>'; return; }
+  const top10 = list.slice(0,10);
+  const myIdx = myRankId ? list.findIndex(r=>r.id===myRankId) : -1;
+  let html = top10.map((r,i)=>{
+    const mine = myRankId && r.id===myRankId;
+    return `<li class="${mine?'mine':''}">
+      <span class="r-medal">${medals[i]??(i+1)}</span>
+      <span class="r-name">${r.name}</span>
+      <span class="r-score">${r.score.toLocaleString()}점</span>
+      <span class="r-date">${r.date}${mine?' 👈':''}</span>
     </li>`;
   }).join('');
-
-  if (myIdx >= 10) {
-    const r = list[myIdx];
-    html += `<li class="rank-divider">···</li>
-    <li class="my-record">
-      <span class="rank-medal">${myIdx+1}위</span>
-      <span class="rank-name">${r.name}</span>
-      <span class="rank-score">${r.score.toLocaleString()}점</span>
-      <span class="rank-date">${r.date} 👈</span>
+  if (myIdx>=10) {
+    const r=list[myIdx];
+    html+=`<li class="sep">···</li>
+    <li class="mine">
+      <span class="r-medal">${myIdx+1}위</span>
+      <span class="r-name">${r.name}</span>
+      <span class="r-score">${r.score.toLocaleString()}점</span>
+      <span class="r-date">${r.date} 👈</span>
     </li>`;
   }
-  rankingList.innerHTML = html;
+  rlist.innerHTML = html;
 }
 
-// ── 랭킹 팝업 ────────────────────────────────────────
-async function showRankingPopup() {
-  const list = await loadRanking();
-  const medals = ['🥇','🥈','🥉'];
-  if (!list.length) { popupBody.innerHTML = '<p style="text-align:center;color:#aaa;padding:20px;">아직 기록이 없어요!</p>'; }
+async function showRankPopup() {
+  const list = await fbLoad();
+  const body = document.getElementById('rankBody');
+  if (!list.length) { body.innerHTML='<p style="text-align:center;color:#aaa;padding:20px;">아직 기록이 없어요!</p>'; }
   else {
-    const top10 = list.slice(0, 10);
-    const myIdx = myRankId ? list.findIndex(r => r.id === myRankId) : -1;
-
-    let rows = top10.map((r, i) => {
-      const mine = myRankId && r.id === myRankId;
-      return `<tr class="${mine ? 'my-row' : ''}">
-        <td>${medals[i] ?? (i+1)+'위'}</td>
-        <td>${r.name}</td>
-        <td>${r.score.toLocaleString()}점</td>
-        <td>${r.date}</td>
+    const top10 = list.slice(0,10);
+    const myIdx = myRankId ? list.findIndex(r=>r.id===myRankId) : -1;
+    let rows = top10.map((r,i)=>{
+      const mine = myRankId && r.id===myRankId;
+      return `<tr class="${mine?'mine-row':''}">
+        <td>${medals[i]??(i+1+'위')}</td>
+        <td>${r.name}</td><td>${r.score.toLocaleString()}점</td><td>${r.date}</td>
       </tr>`;
     }).join('');
-
-    // 10위 밖 내 기록
-    if (myIdx >= 10) {
-      const r = list[myIdx];
-      rows += `<tr><td colspan="4" class="my-rank-sep">···</td></tr>
-      <tr class="my-row">
-        <td>${myIdx+1}위</td><td>${r.name}</td>
-        <td>${r.score.toLocaleString()}점</td><td>${r.date}</td>
-      </tr>`;
+    if (myIdx>=10) {
+      const r=list[myIdx];
+      rows+=`<tr><td colspan="4" class="my-sep">···</td></tr>
+      <tr class="mine-row"><td>${myIdx+1}위</td><td>${r.name}</td><td>${r.score.toLocaleString()}점</td><td>${r.date}</td></tr>`;
     }
-
-    popupBody.innerHTML = `<table class="rank-table">
+    body.innerHTML=`<table class="rtable">
       <thead><tr><th>순위</th><th>닉네임</th><th>점수</th><th>날짜</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+      <tbody>${rows}</tbody></table>`;
   }
-  rankPopup.classList.add('show');
+  document.getElementById('rankPopup').classList.add('show');
 }
 
-document.getElementById('closePopup').onclick = () => rankPopup.classList.remove('show');
-rankPopup.addEventListener('click', e => { if (e.target === rankPopup) rankPopup.classList.remove('show'); });
-
-// ── 닉네임 등록 공통 함수 ────────────────────────────
-function bindSubmit(inputId, btnId, boxEl) {
+// ── 닉네임 등록 ───────────────────────────────────────
+function bindSubmit(inputId, btnId, alertEl) {
   const input = document.getElementById(inputId);
   const btn   = document.getElementById(btnId);
-  const handler = async () => {
+  const go = async () => {
     const name = input.value.trim();
-    if (!name) { input.focus(); input.style.borderColor = '#dc3545'; return; }
-    input.style.borderColor = '#ccc';
-    btn.disabled = true; btn.textContent = '저장 중...';
-    const { myId } = await saveRanking(gs.score, name);
-    myRankId = myId;    // 입력창 숨기고 팝업 표시
-    boxEl.querySelector('.name-input-row').style.display = 'none';
+    if (!name) { input.style.borderColor='#dc3545'; input.focus(); return; }
+    input.style.borderColor='#ccc';
+    btn.disabled=true; btn.textContent='저장 중...';
+    myRankId = await fbSave(gs.score, name);
+    alertEl.querySelector('.name-row').style.display='none';
     await renderRanking();
-    await showRankingPopup();
-    btn.disabled = false; btn.textContent = '등록 🏆';
+    await showRankPopup();
+    btn.disabled=false; btn.textContent='등록 🏆';
   };
-  btn.addEventListener('click', handler);
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') handler(); });
+  btn.addEventListener('click', go);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') go(); });
 }
 
 // ── 게임 상태 ─────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl     = document.getElementById('score');
+const finalScoreEl= document.getElementById('finalScore');
+const winScoreEl  = document.getElementById('winScore');
+const gameOverBox = document.getElementById('gameOverBox');
+const winBox      = document.getElementById('winBox');
+
+const W=400, H=450, GRAVITY=0.4, GAMEOVER_Y=100;
+
+const fruitTypes=[
+  {emoji:'🍒',  radius:15, points:1 },
+  {emoji:'🍋‍🟩', radius:20, points:3 },
+  {emoji:'🍇',  radius:20, points:6 },
+  {emoji:'🍊',  radius:25, points:10},
+  {emoji:'🍋',  radius:30, points:15},
+  {emoji:'🍎',  radius:35, points:21},
+  {emoji:'🍑',  radius:40, points:28},
+  {emoji:'🍍',  radius:55, points:36},
+  {emoji:'🥥',  radius:60, points:45},
+  {emoji:'🍈',  radius:70, points:55},
+  {emoji:'🍉',  radius:80, points:75},
+];
+
 function newState() {
-  return {
-    fruits:[], dropping:false, mouseX:200,
-    frame:0, score:0, gameOver:false, won:false,
-    nextFruit: Math.floor(Math.random()*5),
-    winMelon:null, explodeFrame:0
-  };
+  return { fruits:[], dropping:false, mouseX:200, frame:0,
+           score:0, gameOver:false, won:false,
+           nextFruit:Math.floor(Math.random()*5),
+           winMelon:null, explodeFrame:0 };
 }
-let gs = newState();
-let rafId = null;
+let gs=newState(), rafId=null;
 
 function triggerGameOver() {
-  if (gs.gameOver) return;
-  gs.gameOver = true;
-  finalScoreEl.textContent = gs.score;
-  gameOverBox.style.display = 'block';
+  if(gs.gameOver) return;
+  gs.gameOver=true;
+  finalScoreEl.textContent=gs.score;
+  gameOverBox.style.display='block';
 }
 
 // ── 게임 루프 ─────────────────────────────────────────
 function gameLoop() {
   gs.frame++;
 
-  // 승리 애니메이션
-  if (gs.winMelon) {
+  if(gs.winMelon) {
     gs.explodeFrame++;
     ctx.clearRect(0,0,W,H);
     ctx.fillStyle='#fff5e6'; ctx.fillRect(0,0,W,H);
-    const m=gs.winMelon, prog=gs.explodeFrame/60;
-    if (prog < 0.5) {
-      const sc=1+prog*0.8;
-      ctx.font=`${m.radius*2*sc}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('🍉',m.x,m.y);
-      ctx.fillStyle='#ff6b6b'; ctx.font=`${30*sc}px Arial`;
-      ctx.fillText('ㅋㅋㅋ',m.x,m.y-m.radius*1.5*sc);
-    } else if (prog < 1) {
-      const ep=(prog-0.5)*2;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
+    const m=gs.winMelon, p=gs.explodeFrame/60;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(p<0.5){
+      const sc=1+p*0.8;
+      ctx.font=`${m.radius*2*sc}px Arial`; ctx.fillText('🍉',m.x,m.y);
+      ctx.fillStyle='#ff6b6b'; ctx.font=`${30*sc}px Arial`; ctx.fillText('ㅋㅋㅋ',m.x,m.y-m.radius*1.5*sc);
+    } else if(p<1){
+      const ep=(p-0.5)*2;
       for(let i=0;i<8;i++){
         const a=(Math.PI*2*i)/8, d=ep*150;
         ctx.font=`${30*(1-ep)}px Arial`;
@@ -406,42 +391,37 @@ function gameLoop() {
     rafId=requestAnimationFrame(gameLoop); return;
   }
 
-  if (gs.gameOver) return;
-
+  if(gs.gameOver) return;
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#fff5e6'; ctx.fillRect(0,0,W,H);
 
-  // 벽
   ctx.fillStyle='#8b4513';
   ctx.fillRect(0,0,10,H); ctx.fillRect(W-10,0,10,H); ctx.fillRect(0,H-10,W,10);
 
-  // 게임오버 라인
   ctx.strokeStyle='#ff0000'; ctx.setLineDash([5,5]); ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(10,GAMEOVER_Y); ctx.lineTo(W-10,GAMEOVER_Y); ctx.stroke();
   ctx.setLineDash([]);
 
-  // 드롭 예정 과일
-  if (!gs.dropping) {
+  if(!gs.dropping){
     const f=fruitTypes[gs.nextFruit];
     ctx.font=`${f.radius*2}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(f.emoji,gs.mouseX,50);
   }
 
-  // 물리
-  gs.fruits.forEach(fruit => {
-    fruit.vy += GRAVITY;
-    const onGround = fruit.y+fruit.radius >= H-11;
-    const onOther  = gs.fruits.some(o => {
+  gs.fruits.forEach(fruit=>{
+    fruit.vy+=GRAVITY;
+    const onGround=fruit.y+fruit.radius>=H-11;
+    const onOther=gs.fruits.some(o=>{
       if(o===fruit) return false;
       const dx=o.x-fruit.x, dy=o.y-fruit.y;
-      return Math.sqrt(dx*dx+dy*dy) < fruit.radius+o.radius+2;
+      return Math.sqrt(dx*dx+dy*dy)<fruit.radius+o.radius+2;
     });
-    fruit.isMoving = Math.abs(fruit.vy)>0.5 || Math.abs(fruit.vx)>0.5;
-    if (onGround||onOther) { fruit.vy*=0.7; fruit.vx*=0.6; }
-    else { fruit.vy*=0.98; fruit.vx*=0.96; }
+    fruit.isMoving=Math.abs(fruit.vy)>0.5||Math.abs(fruit.vx)>0.5;
+    if(onGround||onOther){fruit.vy*=0.7;fruit.vx*=0.6;}
+    else{fruit.vy*=0.98;fruit.vx*=0.96;}
     fruit.x+=fruit.vx; fruit.y+=fruit.vy;
-    if(fruit.x-fruit.radius<10){fruit.x=10+fruit.radius; fruit.vx=Math.abs(fruit.vx)*0.2;}
-    if(fruit.x+fruit.radius>W-10){fruit.x=W-10-fruit.radius; fruit.vx=-Math.abs(fruit.vx)*0.2;}
+    if(fruit.x-fruit.radius<10){fruit.x=10+fruit.radius;fruit.vx=Math.abs(fruit.vx)*0.2;}
+    if(fruit.x+fruit.radius>W-10){fruit.x=W-10-fruit.radius;fruit.vx=-Math.abs(fruit.vx)*0.2;}
     if(fruit.y+fruit.radius>H-10){
       fruit.y=H-10-fruit.radius;
       fruit.vy=-Math.abs(fruit.vy)*0.05; fruit.vx*=0.6;
@@ -450,20 +430,18 @@ function gameLoop() {
     fruit.isColliding=fruit.lastHit&&(Date.now()-fruit.lastHit<1000);
   });
 
-  // 충돌
-  for(let iter=0;iter<3;iter++){
+  for(let it=0;it<3;it++){
     for(let i=0;i<gs.fruits.length;i++){
       for(let j=i+1;j<gs.fruits.length;j++){
-        const a=gs.fruits[i], b=gs.fruits[j];
-        const dx=b.x-a.x, dy=b.y-a.y;
-        const dist=Math.sqrt(dx*dx+dy*dy), minD=a.radius+b.radius;
+        const a=gs.fruits[i],b=gs.fruits[j];
+        const dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy),minD=a.radius+b.radius;
         if(dist<minD&&dist>0){
           if(a.type===b.type&&a.type<10&&!a.merging&&!b.merging){
             a.merging=b.merging=true;
-            const nt=a.type+1, mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+            const nt=a.type+1,mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
             setTimeout(()=>{
-              const i1=gs.fruits.indexOf(a); if(i1!==-1)gs.fruits.splice(i1,1);
-              const i2=gs.fruits.indexOf(b); if(i2!==-1)gs.fruits.splice(i2,1);
+              const i1=gs.fruits.indexOf(a);if(i1!==-1)gs.fruits.splice(i1,1);
+              const i2=gs.fruits.indexOf(b);if(i2!==-1)gs.fruits.splice(i2,1);
               const nf={x:mx,y:my,vx:0,vy:0,type:nt,radius:fruitTypes[nt].radius,
                         merging:false,isMoving:false,isColliding:false,lastHit:null,spawnTime:Date.now()};
               gs.fruits.push(nf);
@@ -473,77 +451,70 @@ function gameLoop() {
             },50);
             continue;
           }
-          const overlap=minD-dist, nx=dx/dist, ny=dy/dist;
-          const speed=Math.abs(a.vx)+Math.abs(a.vy)+Math.abs(b.vx)+Math.abs(b.vy);
-          if(speed>2){a.lastHit=b.lastHit=Date.now();}
-          a.x-=nx*overlap*0.5; a.y-=ny*overlap*0.5;
-          b.x+=nx*overlap*0.5; b.y+=ny*overlap*0.5;
-          const relVx=b.vx-a.vx, relVy=b.vy-a.vy, dot=relVx*nx+relVy*ny;
-          if(dot<0){const imp=dot*0.15; a.vx+=imp*nx;a.vy+=imp*ny;b.vx-=imp*nx;b.vy-=imp*ny;}
+          const ov=minD-dist,nx=dx/dist,ny=dy/dist;
+          const sp=Math.abs(a.vx)+Math.abs(a.vy)+Math.abs(b.vx)+Math.abs(b.vy);
+          if(sp>2){a.lastHit=b.lastHit=Date.now();}
+          a.x-=nx*ov*0.5;a.y-=ny*ov*0.5;b.x+=nx*ov*0.5;b.y+=ny*ov*0.5;
+          const rv=b.vx-a.vx,ry=b.vy-a.vy,dot=rv*nx+ry*ny;
+          if(dot<0){const imp=dot*0.15;a.vx+=imp*nx;a.vy+=imp*ny;b.vx-=imp*nx;b.vy-=imp*ny;}
           const cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-          a.x=cl(a.x,10+a.radius,W-10-a.radius); a.y=cl(a.y,a.radius,H-10-a.radius);
-          b.x=cl(b.x,10+b.radius,W-10-b.radius); b.y=cl(b.y,b.radius,H-10-b.radius);
+          a.x=cl(a.x,10+a.radius,W-10-a.radius);a.y=cl(a.y,a.radius,H-10-a.radius);
+          b.x=cl(b.x,10+b.radius,W-10-b.radius);b.y=cl(b.y,b.radius,H-10-b.radius);
         }
       }
     }
   }
 
-  // 과일 그리기
   gs.fruits.forEach(fruit=>{
     if(fruit.merging) return;
     const type=fruitTypes[fruit.type];
     ctx.save();
-    ctx.translate(fruit.x, fruit.y);
-    ctx.rotate(0); // 회전 고정
+    ctx.translate(fruit.x,fruit.y); ctx.rotate(0);
     ctx.font=`${fruit.radius*2}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(type.emoji, 0, 0);
+    ctx.fillText(type.emoji,0,0);
     ctx.restore();
+
     ctx.fillStyle='#000';
-    const eyeY=fruit.y-fruit.radius*0.2, eyeSz=fruit.isColliding?fruit.radius*0.25:fruit.radius*0.15;
-    ctx.beginPath(); ctx.arc(fruit.x-fruit.radius*0.3,eyeY,eyeSz,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(fruit.x+fruit.radius*0.3,eyeY,eyeSz,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='#000'; ctx.lineWidth=fruit.radius*0.1;
+    const eyeY=fruit.y-fruit.radius*0.2,eyeSz=fruit.isColliding?fruit.radius*0.25:fruit.radius*0.15;
+    ctx.beginPath();ctx.arc(fruit.x-fruit.radius*0.3,eyeY,eyeSz,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(fruit.x+fruit.radius*0.3,eyeY,eyeSz,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#000';ctx.lineWidth=fruit.radius*0.1;
     if(fruit.isColliding){
-      ctx.beginPath(); ctx.moveTo(fruit.x,fruit.y+fruit.radius*0.1);
+      ctx.beginPath();ctx.moveTo(fruit.x,fruit.y+fruit.radius*0.1);
       ctx.lineTo(fruit.x-fruit.radius*0.15,fruit.y+fruit.radius*0.35);
       ctx.lineTo(fruit.x+fruit.radius*0.15,fruit.y+fruit.radius*0.35);
-      ctx.closePath(); ctx.stroke();
+      ctx.closePath();ctx.stroke();
     } else {
-      ctx.beginPath(); ctx.arc(fruit.x,fruit.y+fruit.radius*0.2,fruit.radius*0.3,0,Math.PI); ctx.stroke();
+      ctx.beginPath();ctx.arc(fruit.x,fruit.y+fruit.radius*0.2,fruit.radius*0.3,0,Math.PI);ctx.stroke();
     }
-    ctx.strokeStyle='#000'; ctx.lineWidth=fruit.radius*0.15; ctx.lineCap='round';
+    ctx.strokeStyle='#000';ctx.lineWidth=fruit.radius*0.15;ctx.lineCap='round';
     const wave=fruit.isMoving?Math.sin(gs.frame*0.3)*0.3:0;
-    ctx.beginPath(); ctx.moveTo(fruit.x-fruit.radius*0.7,fruit.y);
-    ctx.lineTo(fruit.x-fruit.radius*1.1,fruit.y-fruit.radius*(0.3+wave)); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(fruit.x+fruit.radius*0.7,fruit.y);
-    ctx.lineTo(fruit.x+fruit.radius*1.1,fruit.y-fruit.radius*(0.3-wave)); ctx.stroke();
+    ctx.beginPath();ctx.moveTo(fruit.x-fruit.radius*0.7,fruit.y);
+    ctx.lineTo(fruit.x-fruit.radius*1.1,fruit.y-fruit.radius*(0.3+wave));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(fruit.x+fruit.radius*0.7,fruit.y);
+    ctx.lineTo(fruit.x+fruit.radius*1.1,fruit.y-fruit.radius*(0.3-wave));ctx.stroke();
   });
 
-  // 게임오버 체크
   const now=Date.now();
   for(const fruit of gs.fruits){
-    if(fruit.merging) continue;
-    if(now-fruit.spawnTime<1500) continue;
+    if(fruit.merging||now-fruit.spawnTime<1500) continue;
     if(Math.abs(fruit.vy)>0.8||Math.abs(fruit.vx)>0.8) continue;
-    if(fruit.y-fruit.radius<GAMEOVER_Y){ triggerGameOver(); return; }
+    if(fruit.y-fruit.radius<GAMEOVER_Y){triggerGameOver();return;}
   }
-
   rafId=requestAnimationFrame(gameLoop);
 }
 
 // ── 입력 ─────────────────────────────────────────────
-canvas.addEventListener('mousemove', e=>{
+canvas.addEventListener('mousemove',e=>{
   if(gs.gameOver) return;
-  const rect=canvas.getBoundingClientRect(), scaleX=W/rect.width;
-  const x=(e.clientX-rect.left)*scaleX;
-  const r=fruitTypes[gs.nextFruit].radius;
+  const rect=canvas.getBoundingClientRect(),sx=W/rect.width;
+  const x=(e.clientX-rect.left)*sx,r=fruitTypes[gs.nextFruit].radius;
   gs.mouseX=Math.max(10+r,Math.min(W-10-r,x));
 });
-canvas.addEventListener('touchmove', e=>{
+canvas.addEventListener('touchmove',e=>{
   if(gs.gameOver) return; e.preventDefault();
-  const rect=canvas.getBoundingClientRect(), scaleX=W/rect.width;
-  const x=(e.touches[0].clientX-rect.left)*scaleX;
-  const r=fruitTypes[gs.nextFruit].radius;
+  const rect=canvas.getBoundingClientRect(),sx=W/rect.width;
+  const x=(e.touches[0].clientX-rect.left)*sx,r=fruitTypes[gs.nextFruit].radius;
   gs.mouseX=Math.max(10+r,Math.min(W-10-r,x));
 },{passive:false});
 
@@ -553,48 +524,55 @@ function dropFruit(){
   gs.fruits.push({x:gs.mouseX,y:50,vx:0,vy:0,type:gs.nextFruit,radius:f.radius,
                   merging:false,isMoving:true,isColliding:false,lastHit:null,spawnTime:Date.now()});
   gs.dropping=true;
-  setTimeout(()=>{gs.dropping=false; gs.nextFruit=Math.floor(Math.random()*5);},500);
+  setTimeout(()=>{gs.dropping=false;gs.nextFruit=Math.floor(Math.random()*5);},500);
 }
-canvas.addEventListener('click', dropFruit);
-canvas.addEventListener('touchend', e=>{ e.preventDefault(); dropFruit(); });
+canvas.addEventListener('click',dropFruit);
+canvas.addEventListener('touchend',e=>{e.preventDefault();dropFruit();});
 
-function doReset() {
+// ── 리셋 ─────────────────────────────────────────────
+function doReset(){
   if(rafId) cancelAnimationFrame(rafId);
   myRankId=null; gs=newState();
   scoreEl.textContent='0';
-  gameOverBox.style.display='none';
-  winBox.style.display='none';
-  gameOverBox.querySelector('.name-input-row').style.display='flex';
-  winBox.querySelector('.name-input-row').style.display='flex';
+  gameOverBox.style.display='none'; winBox.style.display='none';
+  gameOverBox.querySelector('.name-row').style.display='flex';
+  winBox.querySelector('.name-row').style.display='flex';
   document.getElementById('overName').value='';
   document.getElementById('winName').value='';
   gameLoop();
 }
 
-function doEnd() {
-  const popup = document.getElementById('confirmPopup');
-  popup.style.display = 'flex';
-}
+document.getElementById('resetBtn').addEventListener('click',doReset);
+document.getElementById('resetBtn2').addEventListener('click',doReset);
 
-document.getElementById('confirmNo').addEventListener('click', () => {
-  document.getElementById('confirmPopup').style.display = 'none';
+// ── 종료 ─────────────────────────────────────────────
+document.getElementById('endBtn').addEventListener('click',()=>{
+  document.getElementById('confirmOverlay').classList.add('show');
 });
-document.getElementById('confirmYes').addEventListener('click', () => {
-  document.getElementById('confirmPopup').style.display = 'none';
+document.getElementById('confirmNo').addEventListener('click',()=>{
+  document.getElementById('confirmOverlay').classList.remove('show');
+});
+document.getElementById('confirmYes').addEventListener('click',()=>{
+  document.getElementById('confirmOverlay').classList.remove('show');
   if(rafId) cancelAnimationFrame(rafId);
-  gs.gameOver = true;
-  finalScoreEl.textContent = gs.score;
-  gameOverBox.style.display = 'block';
+  gs.gameOver=true;
+  finalScoreEl.textContent=gs.score;
+  gameOverBox.style.display='block';
 });
 
-resetBtn.addEventListener('click', doReset);
-resetBtn2.addEventListener('click', doReset);
-endBtn.addEventListener('click', doEnd);
-rankBtn.addEventListener('click', showRankingPopup);
+// ── 랭킹 팝업 ─────────────────────────────────────────
+document.getElementById('rankBtn').addEventListener('click', showRankPopup);
+document.getElementById('closeRank').addEventListener('click',()=>{
+  document.getElementById('rankPopup').classList.remove('show');
+});
+document.getElementById('rankPopup').addEventListener('click',e=>{
+  if(e.target===document.getElementById('rankPopup'))
+    document.getElementById('rankPopup').classList.remove('show');
+});
 
-// ── 닉네임 등록 바인딩 ────────────────────────────────
-bindSubmit('overName', 'overSubmit', gameOverBox);
-bindSubmit('winName',  'winSubmit',  winBox);
+// ── 닉네임 바인딩 ─────────────────────────────────────
+bindSubmit('overName','overSubmit',gameOverBox);
+bindSubmit('winName', 'winSubmit', winBox);
 
 // ── 시작 ─────────────────────────────────────────────
 renderRanking();
