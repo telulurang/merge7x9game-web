@@ -281,8 +281,8 @@
         </div>
         <div class="top-controls">
             <div class="left-controls">
-                <button class="mini-btn ranking-mini" id="rankingBtn">🏆 랭킹</button>
                 <button class="mini-btn fill-mini" id="fillBtn">✨ 채우기</button>
+                <button class="mini-btn ranking-mini" id="rankingBtn">🏆 랭킹</button>
             </div>
             <div class="next-item-wrapper">
                 <div class="next-item">
@@ -592,7 +592,6 @@
             return m+1;
         }
 
-        // ── Firebase 랭킹 ──
         async function submitRanking(type) {
             const fieldId = type==='success' ? 'nameInputFieldSuccess'
                           : type==='end'     ? 'nameInputFieldEnd'
@@ -679,7 +678,6 @@
             document.getElementById('helpPopup').classList.add('show');
         }
 
-        // ── 이벤트 바인딩 ──
         document.getElementById('fillBtn').addEventListener('click', fillEmpty);
         document.getElementById('resetBtn').addEventListener('click', resetGame);
         document.getElementById('helpBtn').addEventListener('click', showHelp);
