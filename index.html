@@ -647,22 +647,23 @@
             try {
                 const record = { name, score, time:elapsedTime, level:success?15:getMaxLevel(), timestamp:Date.now(), date:new Date().toISOString() };
                 if (firebaseReady && db) {
-                    try { const ref=await db.collection('rankings').add(record); lastSubmittedId=ref.id; alert('글로벌 랭킹에 등록되었습니다! 🎉'); }
-                    catch(e){ saveToLocalStorage(record); }
-                } else { saveToLocalStorage(record); }
+                    try {
+                        const ref=await db.collection('rankings').add(record);
+                        lastSubmittedId=ref.id;
+                        alert('글로벌 랭킹에 등록되었습니다! 🎉');
+                    } catch(e) {
+                        alert('Firebase 오류: ' + e.message);
+                        btn.disabled=false; btn.textContent='🏆 랭킹 등록'; return;
+                    }
+                } else {
+                    alert('Firebase가 연결되지 않았습니다.\n.html 파일로 저장 후 웹에서 열어주세요.');
+                    btn.disabled=false; btn.textContent='🏆 랭킹 등록'; return;
+                }
                 field.value=''; showRanking();
             } catch(e){ alert('랭킹 등록에 실패했습니다.\n오류: '+e.message); }
             finally { btn.disabled=false; btn.textContent='🏆 랭킹 등록'; }
         }
 
-        function saveToLocalStorage(record) {
-            let r=JSON.parse(localStorage.getItem('mergeGameRankings')||'[]');
-            record.id='local_'+Date.now(); lastSubmittedId=record.id;
-            r.push(record);
-            r.sort((a,b)=>a.level!==b.level?b.level-a.level:a.time!==b.time?a.time-b.time:b.score-a.score);
-            localStorage.setItem('mergeGameRankings',JSON.stringify(r.slice(0,10)));
-            alert('로컬 랭킹에 등록되었습니다! 💾');
-        }
 
         function getMaxLevel() {
             let m=0;
@@ -674,7 +675,7 @@
             const content=document.getElementById('rankingContent');
             const isF=firebaseReady&&db;
             const title=document.querySelector('#rankingPopup .popup-title');
-            if (title) title.textContent=isF?'🏆 글로벌 랭킹 (Top 10)':'🏆 로컬 랭킹 (Top 10)';
+            if (title) title.textContent='🏆 글로벌 랭킹 (Top 10)';
             content.innerHTML='<div class="loading">랭킹 불러오는 중...</div>';
             document.getElementById('rankingPopup').style.display='flex';
             try {
@@ -683,8 +684,10 @@
                     try {
                         const snap=await db.collection('rankings').orderBy('level','desc').orderBy('time','asc').orderBy('score','desc').limit(10).get();
                         snap.forEach(d=>rankings.push({id:d.id,...d.data()}));
-                    } catch(e){ rankings=JSON.parse(localStorage.getItem('mergeGameRankings')||'[]'); }
-                } else { rankings=JSON.parse(localStorage.getItem('mergeGameRankings')||'[]'); }
+                    } catch(e){ content.innerHTML='<p style="text-align:center;color:#ef4444;padding:20px;">랭킹을 불러오지 못했습니다.</p>'; return; }
+                } else {
+                    content.innerHTML='<p style="text-align:center;color:#666;padding:20px;">Firebase 연결 중입니다. 잠시 후 다시 시도해주세요.</p>'; return;
+                }
                 if (!rankings.length) { content.innerHTML='<p style="text-align:center;color:#666;padding:20px;">아직 등록된 랭킹이 없습니다.</p>'; return; }
                 let html='<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>시간</th><th>점수</th></tr></thead><tbody>';
                 rankings.forEach((rec,i)=>{
