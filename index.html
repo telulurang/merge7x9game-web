@@ -374,7 +374,7 @@
     <div id="rankingPopup" class="popup-overlay">
         <div class="popup-content">
             <div class="popup-header">
-                <div class="popup-title">🏆 글로벌 랭킹 (Top 10)</div>
+                <div class="popup-title">🏆 글로벌 랭킹 (Top 50)</div>
                 <button class="close-btn" onclick="hideRanking()">×</button>
             </div>
             <div id="rankingContent"></div>
@@ -682,7 +682,7 @@
                 let rankings=[];
                 if (isF) {
                     try {
-                        const snap=await db.collection('rankings').orderBy('level','desc').orderBy('time','asc').orderBy('score','desc').limit(10).get();
+                        const snap=await db.collection('rankings').orderBy('level','desc').orderBy('time','asc').orderBy('score','desc').limit(50).get();
                         snap.forEach(d=>rankings.push({id:d.id,...d.data()}));
                     } catch(e){ content.innerHTML='<p style="text-align:center;color:#ef4444;padding:20px;">랭킹을 불러오지 못했습니다.</p>'; return; }
                 } else {
