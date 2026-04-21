@@ -688,15 +688,29 @@
                 } else {
                     content.innerHTML='<p style="text-align:center;color:#666;padding:20px;">Firebase 연결 중입니다. 잠시 후 다시 시도해주세요.</p>'; return;
                 }
-                if (!rankings.length) { content.innerHTML='<p style="text-align:center;color:#666;padding:20px;">아직 등록된 랭킹이 없습니다.</p>'; return; }
+                const myIndex = lastSubmittedId ? rankings.findIndex(r=>r.id===lastSubmittedId) : -1;
+                const top10 = rankings.slice(0, 10);
+
+                if (!top10.length) { content.innerHTML='<p style="text-align:center;color:#666;padding:20px;">아직 등록된 랭킹이 없습니다.</p>'; return; }
                 let html='<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>시간</th><th>점수</th></tr></thead><tbody>';
-                rankings.forEach((rec,i)=>{
+                top10.forEach((rec,i)=>{
                     const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
                     const m=Math.floor(rec.time/60), s=rec.time%60;
                     const t=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
                     html+=`<tr class="${lastSubmittedId&&rec.id===lastSubmittedId?'my-record':''}"><td class="rank-medal">${medal}</td><td>${rec.name}</td><td>Lv.${rec.level}</td><td>${t}</td><td>${rec.score}</td></tr>`;
                 });
                 html+='</tbody></table>';
+
+                // 내 순위가 10위 밖이면 따로 표시
+                if (myIndex >= 10) {
+                    const rec = rankings[myIndex];
+                    const m=Math.floor(rec.time/60), s=rec.time%60;
+                    const t=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                    html+=`<div style="margin-top:12px;padding:10px;background:#fef3c7;border-radius:8px;text-align:center;font-size:13px;">
+                        <div style="color:#92400e;font-weight:bold;margin-bottom:4px;">📍 내 순위: ${myIndex+1}위</div>
+                        <div style="color:#666;">${rec.name} | Lv.${rec.level} | ${t} | ${rec.score}점</div>
+                    </div>`;
+                }
                 if (!isF) html+='<p style="text-align:center;color:#666;font-size:11px;margin-top:12px;">💾 로컬 저장 모드</p>';
                 content.innerHTML=html;
             } catch(e){ content.innerHTML='<p style="text-align:center;color:#ef4444;padding:20px;">랭킹 불러오기 실패</p>'; }
