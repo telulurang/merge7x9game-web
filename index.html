@@ -178,7 +178,7 @@
         .cell.has-item:hover { transform: scale(1.1); }
         .cell:hover { background: #f3e8ff; }
         .cell.selected { border: 4px solid #3b82f6; background: #dbeafe; }
-        .cell.hint { border: 4px solid #22c55e; animation: pulse 2s infinite; }
+        .cell.hint { border: 4px solid #22c55e; animation: pulse 5s infinite; }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -374,7 +374,7 @@
     <div id="rankingPopup" class="popup-overlay">
         <div class="popup-content">
             <div class="popup-header">
-                <div class="popup-title">🏆 글로벌 랭킹 (Top 50)</div>
+                <div class="popup-title">🏆 글로벌 랭킹 (Top 10)</div>
                 <button class="close-btn" onclick="hideRanking()">×</button>
             </div>
             <div id="rankingContent"></div>
