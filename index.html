@@ -1,582 +1,767 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🍉 수박게임</title>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script>
-    firebase.initializeApp({
-      apiKey: "AIzaSyAblm8T1_tygTGNm27GMv9pyOGHNX3JA7c",
-      authDomain: "watermelon-game-f7569.firebaseapp.com",
-      projectId: "watermelon-game-f7569",
-      storageBucket: "watermelon-game-f7569.firebasestorage.app",
-      messagingSenderId: "44347440824",
-      appId: "1:44347440824:web:dd7c9d5765c2a8dc23fe4d"
-    });
-    window.db = firebase.firestore();
-  </script>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      min-height:100vh;
-      background:linear-gradient(135deg,#fbc2eb,#ffeaa7);
-      display:flex; align-items:center; justify-content:center;
-      padding:10px;
-      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-    }
-    .wrap {
-      background:white; border-radius:20px;
-      box-shadow:0 20px 60px rgba(0,0,0,0.3);
-      padding:15px; width:420px; max-width:100%;
-    }
-    h1 { text-align:center; font-size:1.4em; margin-bottom:10px; color:#333; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>머지 게임</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+font-family: Arial, sans-serif;
+background: linear-gradient(to bottom right, #e9d5ff, #fbcfe8);
+height: 100vh;
+height: calc(var(--vh, 1vh) * 100);
+display: flex;
+justify-content: center;
+align-items: center;
+padding: 2px;
+overflow: hidden;
+}
+.container {
+background: white;
+border-radius: 16px;
+box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+padding: 12px;
+max-width: 500px;
+width: 100%;
+height: 98%;
+max-height: 98%;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+}
+@media (max-width: 480px) {
+.container { 
+padding: 8px 8px 4px 8px;
+border-radius: 12px;
+}
+}
+.header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 12px;
+flex-shrink: 0;
+}
+@media (max-width: 480px) {
+.header { margin-bottom: 8px; }
+}
+.top-controls {
+display: grid;
+grid-template-columns: 1fr auto 1fr;
+gap: 8px;
+margin-bottom: 8px;
+align-items: center;
+flex-shrink: 0;
+}
+.left-controls { display: flex; gap: 6px; justify-content: flex-start; }
+.right-controls { display: flex; gap: 6px; justify-content: flex-end; }
+@media (max-width: 480px) {
+.top-controls { margin-bottom: 4px; gap: 4px; }
+}
+.next-item-wrapper { flex-shrink: 0; }
+.next-item {
+background: linear-gradient(to right, #e9d5ff, #fbcfe8);
+border-radius: 8px;
+padding: 8px;
+text-align: center;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 8px;
+}
+.next-emoji { font-size: 32px; }
+.next-info { font-size: 12px; color: #666; display: flex; flex-direction: column; align-items: flex-start; }
+@media (max-width: 480px) {
+.next-item { padding: 6px; gap: 6px; }
+.next-emoji { font-size: 24px; }
+.next-info { font-size: 10px; }
+}
+.mini-btn {
+padding: 5px 8px;
+border: none;
+border-radius: 6px;
+font-size: 11px;
+font-weight: bold;
+cursor: pointer;
+white-space: nowrap;
+transition: all 0.2s;
+}
+.fill-mini { background: linear-gradient(to right, #10b981, #3b82f6); color: white; }
+.fill-mini:hover { background: linear-gradient(to right, #059669, #2563eb); }
+.reset-mini { background: linear-gradient(to right, #9333ea, #ec4899); color: white; }
+.reset-mini:hover { background: linear-gradient(to right, #7e22ce, #db2777); }
+.end-mini { background: linear-gradient(to right, #dc2626, #ea580c); color: white; }
+.end-mini:hover { background: linear-gradient(to right, #b91c1c, #c2410c); }
+.ranking-mini { background: linear-gradient(to right, #f59e0b, #ef4444); color: white; }
+.ranking-mini:hover { background: linear-gradient(to right, #d97706, #dc2626); }
+h1 { color: #9333ea; font-size: 28px; }
+@media (max-width: 480px) { h1 { font-size: 22px; } }
+.score { text-align: right; }
+.score-text { color: #ec4899; font-size: 16px; font-weight: bold; }
+@media (max-width: 480px) { .score-text { font-size: 14px; } }
+.hint-text { color: #22c55e; font-size: 10px; }
+.time-text { color: #3b82f6; font-size: 10px; }
+.game-success {
+background: linear-gradient(to right, #d9f99d, #bef264);
+border-radius: 12px;
+padding: 12px;
+text-align: center;
+margin-bottom: 6px;
+display: none;
+flex-shrink: 0;
+}
+.game-success h2 { color: #365314; font-size: 20px; margin-bottom: 2px; }
+.game-over {
+background: linear-gradient(to right, #fecaca, #fed7aa);
+border-radius: 12px;
+padding: 12px;
+text-align: center;
+margin-bottom: 6px;
+display: none;
+flex-shrink: 0;
+}
+.game-over h2 { color: #b91c1c; font-size: 20px; margin-bottom: 2px; }
 
-    /* 점수+버튼 행 */
-    .score-row {
-      display:flex; align-items:center; justify-content:space-between;
-      margin-bottom:10px; gap:6px;
-    }
-    .side-btns { display:flex; flex-direction:column; gap:5px; }
-    .score-box { text-align:center; background:#d4edda; padding:8px 16px; border-radius:10px; flex-shrink:0; }
-    .score-label { font-size:0.75em; color:#666; }
-    .score-value { font-size:1.5em; font-weight:bold; color:#28a745; }
-    .sbtn {
-      padding:6px 10px; border:none; border-radius:8px;
-      font-size:0.78em; font-weight:bold; cursor:pointer;
-      transition:all .2s; white-space:nowrap; color:white;
-    }
-    .sbtn:hover { transform:translateY(-1px); box-shadow:0 3px 8px rgba(0,0,0,.15); }
-    .btn-new  { background:linear-gradient(135deg,#28a745,#17a2b8); }
-    .btn-end  { background:linear-gradient(135deg,#dc3545,#fd7e14); }
-    .btn-rank { background:linear-gradient(135deg,#f59e0b,#ef4444); padding:12px 10px; }
+/* ── 핵심 수정 영역 ── */
+.grid-container {
+background: white;
+border: 2px solid #d8b4fe;
+border-radius: 12px;
+padding: 8px;
+margin-bottom: 4px;
+flex: 1 1 0;
+min-height: 0;          /* flex 축소 허용 */
+display: flex;
+align-items: center;
+justify-content: center;
+overflow: hidden;
+}
+.grid {
+display: grid;
+grid-template-columns: repeat(7, 1fr);
+grid-template-rows: repeat(9, 1fr);
+gap: 2px;
+/* 고정 max 크기 대신, 컨테이너를 꽉 채우되 7:9 비율 유지 */
+width: 100%;
+height: 100%;
+max-width: min(100%, calc(100% * 7 / 9 * (9/7)));  /* fallback */
+}
+/* JS로 계산된 실제 크기를 CSS 변수로 받아 적용 */
+#grid {
+width: var(--grid-w, 100%);
+height: var(--grid-h, 100%);
+}
+/* ── 핵심 수정 끝 ── */
 
-    /* 알림 박스 */
-    .alert { border-radius:10px; padding:12px; margin-bottom:10px; text-align:center; display:none; }
-    .alert.red  { background:#f8d7da; border:2px solid #f5c6cb; }
-    .alert.red p  { color:#721c24; font-weight:bold; }
-    .alert.yel  { background:#fff3cd; border:2px solid #ffc107; }
-    .alert.yel p  { color:#856404; font-weight:bold; }
-    .name-row { display:flex; gap:6px; margin-top:8px; justify-content:center; }
-    .name-input {
-      padding:6px 10px; border:2px solid #ccc; border-radius:8px;
-      font-size:.9em; width:180px; outline:none;
-    }
-    .name-input:focus { border-color:#28a745; }
-    .name-btn {
-      padding:6px 14px; background:#28a745; color:white;
-      border:none; border-radius:8px; font-size:.9em;
-      font-weight:bold; cursor:pointer;
-    }
-    .name-btn:hover { background:#218838; }
-    .name-btn:disabled { opacity:.5; cursor:not-allowed; }
-
-    /* 캔버스 */
-    #gameCanvas {
-      border:4px solid #333; border-radius:10px;
-      cursor:pointer; display:block; margin:0 auto 10px;
-      touch-action:none; max-width:100%;
-    }
-
-    /* 새게임 큰 버튼 */
-    .main-btn {
-      width:100%; padding:12px;
-      background:linear-gradient(135deg,#28a745,#17a2b8);
-      color:white; border:none; border-radius:10px;
-      font-size:1em; font-weight:bold; cursor:pointer;
-      transition:all .3s; margin-bottom:10px;
-    }
-    .main-btn:hover { transform:translateY(-2px); box-shadow:0 5px 15px rgba(0,0,0,.2); }
-
-    /* 하단 랭킹 */
-    .ranking { background:#f8f9fa; border-radius:12px; padding:12px; }
-    .ranking h2 { text-align:center; font-size:1em; color:#555; margin-bottom:8px; }
-    .rlist { list-style:none; }
-    .rlist li {
-      display:flex; align-items:center; gap:6px;
-      padding:5px 8px; border-radius:8px; margin-bottom:4px;
-      font-size:.85em; background:white;
-      box-shadow:0 1px 3px rgba(0,0,0,.08);
-    }
-    .rlist li.mine { background:#fffde7; border:1px solid #ffd54f; }
-    .rlist li.sep  { background:none!important; box-shadow:none!important; justify-content:center; color:#bbb; }
-    .r-medal { width:26px; flex-shrink:0; text-align:center; }
-    .r-name  { flex:1; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .r-score { font-weight:bold; color:#28a745; white-space:nowrap; }
-    .r-date  { color:#aaa; font-size:.78em; white-space:nowrap; }
-    .r-empty { text-align:center; color:#bbb; padding:8px 0; }
-
-    .instructions { text-align:center; color:#666; font-size:.82em; margin-top:8px; line-height:1.4; }
-
-    /* 팝업 공통 */
-    .overlay {
-      position:fixed; inset:0; background:rgba(0,0,0,.55);
-      display:none; align-items:center; justify-content:center; z-index:1000;
-    }
-    .overlay.show { display:flex; }
-    .popup-box {
-      background:white; border-radius:20px; padding:20px;
-      width:360px; max-width:92vw; max-height:80vh; overflow-y:auto;
-      box-shadow:0 20px 60px rgba(0,0,0,.3);
-    }
-    .popup-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
-    .popup-title { font-size:1.15em; font-weight:bold; color:#333; }
-    .close-x {
-      background:#f0f0f0; border:none; border-radius:50%;
-      width:32px; height:32px; font-size:1.1em; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-    }
-    .close-x:hover { background:#ddd; }
-
-    /* 랭킹 팝업 테이블 */
-    .rtable { width:100%; border-collapse:collapse; }
-    .rtable th {
-      background:linear-gradient(135deg,#fbc2eb,#ffeaa7);
-      padding:8px 6px; font-size:.83em; color:#555;
-      border-bottom:2px solid #eee;
-    }
-    .rtable td { padding:8px 6px; font-size:.83em; text-align:center; border-bottom:1px solid #f0f0f0; }
-    .rtable tr.mine-row td { background:#fffde7; font-weight:bold; }
-    .my-sep { text-align:center; color:#bbb; padding:4px; font-size:.85em; }
-
-    /* 확인 팝업 */
-    .confirm-box {
-      background:white; border-radius:16px; padding:24px;
-      width:280px; text-align:center;
-      box-shadow:0 20px 60px rgba(0,0,0,.3);
-    }
-    .confirm-box p { font-size:1.05em; color:#333; margin-bottom:20px; }
-    .confirm-btns { display:flex; gap:12px; justify-content:center; }
-    .c-no  { padding:10px 22px; border:none; border-radius:8px; background:#e5e7eb; color:#333; font-size:.9em; font-weight:bold; cursor:pointer; }
-    .c-yes { padding:10px 22px; border:none; border-radius:8px; background:linear-gradient(135deg,#dc3545,#fd7e14); color:white; font-size:.9em; font-weight:bold; cursor:pointer; }
-  </style>
+.cell {
+width: 100%;
+height: 100%;
+border: 1px solid #d1d5db;
+border-radius: 4px;
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+transition: all 0.2s;
+background: #f9fafb;
+line-height: 1;
+font-size: 80%;
+}
+.cell.has-item {
+background: linear-gradient(to bottom right, #fef3c7, #fed7aa);
+border-color: #fbbf24;
+}
+.cell.has-item:hover { transform: scale(1.1); }
+.cell:hover { background: #f3e8ff; }
+.cell.selected { border: 4px solid #3b82f6; background: #dbeafe; }
+        .cell.hint { border: 4px solid #22c55e; animation: pulse 5s infinite; }
+        .cell.hint { border: 4px solid #22c55e; animation: pulse 2s infinite; }
+@keyframes pulse {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.5; }
+}
+.instructions {
+text-align: center;
+font-size: 11px;
+color: #666;
+flex-shrink: 0;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 8px;
+background: white;
+padding: 4px 0;
+}
+.help-btn {
+background: #e9d5ff;
+border: none;
+border-radius: 6px;
+padding: 4px 8px;
+font-size: 11px;
+cursor: pointer;
+color: #7c3aed;
+font-weight: bold;
+}
+.help-btn:hover { background: #ddd6fe; }
+.popup-overlay {
+position: fixed;
+top: 0; left: 0; right: 0; bottom: 0;
+background: rgba(0,0,0,0.5);
+display: none;
+align-items: center;
+justify-content: center;
+z-index: 1000;
+}
+.popup-overlay.show { display: flex; }
+.popup-content {
+background: white;
+border-radius: 16px;
+padding: 20px;
+max-width: 90vw;
+max-height: 80vh;
+overflow-y: auto;
+}
+.popup-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.popup-title { font-size: 20px; font-weight: bold; color: #9333ea; }
+.close-btn {
+background: #f3f4f6;
+border: none;
+border-radius: 50%;
+width: 32px; height: 32px;
+font-size: 18px;
+cursor: pointer;
+display: flex; align-items: center; justify-content: center;
+}
+.close-btn:hover { background: #e5e7eb; }
+.theme-section { margin-bottom: 20px; }
+.theme-title { font-size: 16px; font-weight: bold; color: #7c3aed; margin-bottom: 8px; }
+.evolution-chain { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.evo-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.evo-emoji {
+font-size: 28px;
+background: linear-gradient(to bottom right, #fef3c7, #fed7aa);
+border: 2px solid #fbbf24;
+border-radius: 8px;
+width: 44px; height: 44px;
+display: flex; align-items: center; justify-content: center;
+}
+.evo-level { font-size: 9px; color: #666; }
+.arrow { font-size: 16px; color: #9ca3af; }
+.ranking-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+.ranking-table th {
+background: linear-gradient(to right, #e9d5ff, #fbcfe8);
+padding: 8px; text-align: center; font-size: 14px; color: #7c3aed;
+border-bottom: 2px solid #d8b4fe;
+}
+.ranking-table td { padding: 8px; text-align: center; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+.ranking-table tr:hover { background: #faf5ff; }
+.rank-medal { font-size: 18px; }
+.name-input-container { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.name-input { padding: 10px; border: 2px solid #d8b4fe; border-radius: 8px; font-size: 16px; text-align: center; }
+.submit-btn {
+padding: 10px;
+background: linear-gradient(to right, #9333ea, #ec4899);
+color: white; border: none; border-radius: 8px;
+font-size: 16px; font-weight: bold; cursor: pointer;
+}
+.submit-btn:hover { background: linear-gradient(to right, #7e22ce, #db2777); }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.my-record { background: #fef3c7 !important; font-weight: bold; }
+.loading { text-align: center; padding: 20px; color: #666; }
+.confirm-popup {
+position: fixed;
+top: 0; left: 0; right: 0; bottom: 0;
+background: rgba(0,0,0,0.5);
+display: none;
+align-items: center; justify-content: center;
+z-index: 2000;
+}
+.confirm-box { background: white; border-radius: 16px; padding: 24px; max-width: 300px; text-align: center; }
+.confirm-message { font-size: 16px; color: #333; margin-bottom: 20px; }
+.confirm-buttons { display: flex; gap: 12px; justify-content: center; }
+.confirm-btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+.confirm-yes { background: linear-gradient(to right, #dc2626, #ea580c); color: white; }
+.confirm-no { background: #e5e7eb; color: #333; }
+</style>
 </head>
 <body>
-<div class="wrap">
-  <h1>🍉 수박게임</h1>
-
-  <!-- 점수+버튼 -->
-  <div class="score-row">
-    <div class="side-btns">
-      <button class="sbtn btn-new" id="resetBtn2">🔄 새게임</button>
-      <button class="sbtn btn-end" id="endBtn">⏹ 종료</button>
-    </div>
-    <div class="score-box">
-      <div class="score-label">점수</div>
-      <div class="score-value" id="score">0</div>
-    </div>
-    <div class="side-btns">
-      <button class="sbtn btn-rank" id="rankBtn">🏆 랭킹</button>
-    </div>
-  </div>
-
-  <!-- 게임오버 -->
-  <div id="gameOverBox" class="alert red">
-    <p>게임 오버! 최종 점수: <span id="finalScore">0</span>점</p>
-    <div class="name-row">
-      <input id="overName" class="name-input" placeholder="닉네임 입력 (최대 10자)" maxlength="10">
-      <button class="name-btn" id="overSubmit">등록 🏆</button>
-    </div>
-  </div>
-
-  <!-- 수박 완성 -->
-  <div id="winBox" class="alert yel">
-    <p>🎉 수박 완성! 최종 점수: <span id="winScore">0</span>점!</p>
-    <div class="name-row">
-      <input id="winName" class="name-input" placeholder="닉네임 입력 (최대 10자)" maxlength="10">
-      <button class="name-btn" id="winSubmit">등록 🏆</button>
-    </div>
-  </div>
-
-  <canvas id="gameCanvas" width="400" height="450"></canvas>
-  <button class="main-btn" id="resetBtn">새 게임</button>
-
-  <!-- 하단 랭킹 -->
-  <div class="ranking">
-    <h2>🏆 랭킹 TOP 10</h2>
-    <ul class="rlist" id="rlist"></ul>
-  </div>
-  <div class="instructions">💡 클릭해서 과일을 떨어뜨리세요!<br>같은 과일끼리 합쳐집니다</div>
+<div class="container">
+<div class="header">
+<h1>머지 게임</h1>
+<div class="score">
+<div class="score-text">점수: <span id="score">0</span></div>
+<div class="time-text">시간: <span id="time">00:00</span></div>
+<div class="hint-text">힌트: <span id="hintCount">0</span>개</div>
+</div>
 </div>
 
-<!-- 종료 확인 팝업 -->
-<div class="overlay" id="confirmOverlay">
-  <div class="confirm-box">
-    <p>게임을 종료하시겠어요?</p>
-    <div class="confirm-btns">
-      <button class="c-no"  id="confirmNo">취소</button>
-      <button class="c-yes" id="confirmYes">종료</button>
-    </div>
-  </div>
+<div class="top-controls">
+<div class="left-controls">
+<button class="mini-btn fill-mini" id="fillBtn">✨ 채우기</button>
+<button class="mini-btn reset-mini" id="resetBtn">🔄 새게임</button>
+</div>
+<div class="next-item-wrapper">
+<div class="next-item">
+<span class="next-emoji" id="nextEmoji"></span>
+<div class="next-info">
+<div id="nextName" style="font-weight: bold;"></div>
+<div id="nextLevel"></div>
+</div>
+</div>
+</div>
+<div class="right-controls">
+<button class="mini-btn ranking-mini" id="rankingBtn">🏆 랭킹</button>
+<button class="mini-btn end-mini" id="endBtn">⏹️ 종료</button>
+</div>
 </div>
 
-<!-- 랭킹 팝업 -->
-<div class="overlay" id="rankPopup">
-  <div class="popup-box">
-    <div class="popup-head">
-      <div class="popup-title">🏆 전체 랭킹</div>
-      <button class="close-x" id="closeRank">×</button>
-    </div>
-    <div id="rankBody"></div>
-  </div>
+<div id="gameSuccessBox" class="game-success">
+<h2>🎉 Lv.15 성공!</h2>
+<div style="font-size: 16px; color: #365314; margin-bottom: 8px;">
+점수: <span id="successScore">0</span> | 시간: <span id="successTime">00:00</span>
 </div>
+<div id="nameInputSuccess" class="name-input-container">
+<input type="text" id="nameInputFieldSuccess" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
+<button class="submit-btn" onclick="submitRanking('success')">🏆 랭킹 등록</button>
+</div>
+</div>
+
+<div id="gameOverBox" class="game-over">
+<h2>게임 오버!</h2>
+<div style="font-size: 16px; color: #666; margin-bottom: 8px;">
+점수: <span id="finalScore">0</span> | 시간: <span id="finalTime">00:00</span>
+</div>
+<div id="nameInputOver" class="name-input-container">
+<input type="text" id="nameInputFieldOver" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
+<button class="submit-btn" onclick="submitRanking('over')">🏆 랭킹 등록</button>
+</div>
+</div>
+
+<div id="gameEndBox" class="game-over">
+<h2>⏹️ 게임 종료</h2>
+<div style="font-size: 16px; color: #666; margin-bottom: 8px;">
+최고 레벨: <span id="endLevel">1</span> | 점수: <span id="endScore">0</span> | 시간: <span id="endTime">00:00</span>
+</div>
+<div id="nameInputEnd" class="name-input-container">
+<input type="text" id="nameInputFieldEnd" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
+<button class="submit-btn" onclick="submitRanking('end')">🏆 랭킹 등록</button>
+</div>
+</div>
+
+<div class="grid-container" id="gridContainer">
+<div id="grid" class="grid"></div>
+</div>
+
+<div class="instructions">
+<span>💡 클릭해서 선택 → 다른 칸 클릭해서 이동/합치기</span>
+<button class="help-btn" onclick="showHelp()">📋 진화표</button>
+</div>
+</div>
+
+<div id="helpPopup" class="popup-overlay">
+<div class="popup-content">
+<div class="popup-header">
+<div class="popup-title">아이템 진화표</div>
+<button class="close-btn" onclick="hideHelp()">×</button>
+</div>
+<div id="evolutionContent"></div>
+</div>
+</div>
+
+<div id="rankingPopup" class="popup-overlay">
+<div class="popup-content">
+<div class="popup-header">
+                <div class="popup-title">🏆 글로벌 랭킹 (Top 10)</div>
+                <div class="popup-title">🏆 글로벌 랭킹 (Top 50)</div>
+<button class="close-btn" onclick="hideRanking()">×</button>
+</div>
+<div id="rankingContent"></div>
+</div>
+</div>
+
+<div id="confirmPopup" class="confirm-popup">
+<div class="confirm-box">
+<div class="confirm-message">게임을 종료하고<br>랭킹에 등록하시겠습니까?</div>
+<div class="confirm-buttons">
+<button class="confirm-btn confirm-no" onclick="hideConfirm()">취소</button>
+<button class="confirm-btn confirm-yes" onclick="confirmEnd()">확인</button>
+</div>
+</div>
+</div>
+
+<script src="https://unpkg.com/firebase@10.7.1/firebase-app-compat.js"></script>
+<script src="https://unpkg.com/firebase@10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
-// ── Firebase 랭킹 ──────────────────────────────────────
-async function fbSave(score, name) {
-  try {
-    const now = new Date();
-    const date = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    const ref = await window.db.collection('rankings').add({
-      score, name: name||'익명', date,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    return ref.id;
-  } catch(e) { return null; }
+let db = null, firebaseReady = false, firebaseInitAttempts = 0;
+function initFirebase() {
+firebaseInitAttempts++;
+try {
+if (typeof firebase !== 'undefined') {
+const firebaseConfig = {
+apiKey: "AIzaSyCJrsEnu2v7pwUdhhrw65_xg1BdR7--IkA",
+authDomain: "merge-game-web.firebaseapp.com",
+projectId: "merge-game-web",
+storageBucket: "merge-game-web.firebasestorage.app",
+messagingSenderId: "47238049366",
+appId: "1:47238049366:web:dacb8f1276bf9e796a15f7",
+measurementId: "G-96REEK2CPV"
+};
+firebase.initializeApp(firebaseConfig);
+db = firebase.firestore();
+firebaseReady = true;
+} else {
+if (firebaseInitAttempts < 10) setTimeout(initFirebase, 500);
+}
+} catch (e) { console.error('Firebase 초기화 실패:', e); }
+}
+window.addEventListener('load', () => setTimeout(initFirebase, 100));
+</script>
+
+<script>
+const W = 7, H = 9;
+const THEMES = {
+fruit:   ['🍇','🍓','🍒','🍊','🍋','🍌','🍎','🍉','🍑','🍍','🥝','🥥','🍈','🥭','🫐'],
+animal:  ['🐭','🐹','🐰','🦊','🐱','🐶','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵'],
+seafood: ['🦐','🦞','🦀','🦑','🐙','🐟','🐠','🐡','🦈','🐬','🐳','🐋','🦭','🐢','🦦'],
+heart:   ['❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💔','❣️','💕','💞','💓','💗'],
+hand:    ['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉'],
+sports:  ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🥎','🏓','🏸','🏑','🏒','🥊','🥋','⛳'],
+food:    ['🍕','🍔','🍗','🌭','🍟','🍰','🍪','🍩','🥐','🥖','🧀','🥓','🥚','🍱','🍜'],
+vehicle: ['🚲','🛴','🏍️','🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚']
+};
+const NAMES = {fruit:'과일',animal:'동물',seafood:'해산물',heart:'하트',hand:'손',sports:'스포츠',food:'음식',vehicle:'탈것'};
+
+let grid, current, score, selected, over, hints, timer, success;
+let startTime, elapsedTime = 0, timeInterval;
+let lastSubmittedId = null;
+let ended = false;
+
+/* ── 그리드 크기 계산 (핵심 수정) ── */
+function fitGrid() {
+const container = document.getElementById('gridContainer');
+const gridEl    = document.getElementById('grid');
+const cw = container.clientWidth  - 16; // padding 8*2
+const ch = container.clientHeight - 16;
+// 7:9 비율 유지
+let gw = Math.min(cw, ch * 7 / 9);
+let gh = gw * 9 / 7;
+if (gh > ch) { gh = ch; gw = gh * 7 / 9; }
+gridEl.style.width  = gw + 'px';
+gridEl.style.height = gh + 'px';
+// 셀 폰트는 셀 높이 기준 60%
+const cellH = gh / 9;
+gridEl.style.fontSize = Math.floor(cellH * 0.6) + 'px';
 }
 
-async function fbLoad() {
-  try {
-    const snap = await window.db.collection('rankings')
-      .orderBy('score','desc').limit(50).get();
-    return snap.docs.map(d => ({ id:d.id, ...d.data() }));
-  } catch(e) { return []; }
+function init() {
+grid = Array(H).fill(0).map(() => Array(W).fill(null));
+for (let r = 0; r < H; r++)
+for (let c = 0; c < W; c++)
+grid[r][c] = random();
+score = 0; selected = null; over = false; success = false; ended = false; hints = [];
+current = random();
+elapsedTime = 0; startTime = Date.now();
+startTimer();
+render();
+startHint();
 }
 
-// ── 랭킹 렌더 ─────────────────────────────────────────
-let myRankId = null;
-const medals = ['🥇','🥈','🥉'];
-
-async function renderRanking() {
-  const list = await fbLoad();
-  const rlist = document.getElementById('rlist');
-  if (!list.length) { rlist.innerHTML='<li class="r-empty">아직 기록이 없어요!</li>'; return; }
-  const top10 = list.slice(0,10);
-  const myIdx = myRankId ? list.findIndex(r=>r.id===myRankId) : -1;
-  let html = top10.map((r,i)=>{
-    const mine = myRankId && r.id===myRankId;
-    return `<li class="${mine?'mine':''}">
-      <span class="r-medal">${medals[i]??(i+1)}</span>
-      <span class="r-name">${r.name}</span>
-      <span class="r-score">${r.score.toLocaleString()}점</span>
-      <span class="r-date">${r.date}${mine?' 👈':''}</span>
-    </li>`;
-  }).join('');
-  if (myIdx>=10) {
-    const r=list[myIdx];
-    html+=`<li class="sep">···</li>
-    <li class="mine">
-      <span class="r-medal">${myIdx+1}위</span>
-      <span class="r-name">${r.name}</span>
-      <span class="r-score">${r.score.toLocaleString()}점</span>
-      <span class="r-date">${r.date} 👈</span>
-    </li>`;
-  }
-  rlist.innerHTML = html;
+function startTimer() {
+if (timeInterval) clearInterval(timeInterval);
+timeInterval = setInterval(() => {
+if (!over && !success && !ended) {
+elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+updateTimeDisplay();
+}
+}, 1000);
 }
 
-async function showRankPopup() {
-  const list = await fbLoad();
-  const body = document.getElementById('rankBody');
-  if (!list.length) { body.innerHTML='<p style="text-align:center;color:#aaa;padding:20px;">아직 기록이 없어요!</p>'; }
-  else {
-    const top10 = list.slice(0,10);
-    const myIdx = myRankId ? list.findIndex(r=>r.id===myRankId) : -1;
-    let rows = top10.map((r,i)=>{
-      const mine = myRankId && r.id===myRankId;
-      return `<tr class="${mine?'mine-row':''}">
-        <td>${medals[i]??(i+1+'위')}</td>
-        <td>${r.name}</td><td>${r.score.toLocaleString()}점</td><td>${r.date}</td>
-      </tr>`;
-    }).join('');
-    if (myIdx>=10) {
-      const r=list[myIdx];
-      rows+=`<tr><td colspan="4" class="my-sep">···</td></tr>
-      <tr class="mine-row"><td>${myIdx+1}위</td><td>${r.name}</td><td>${r.score.toLocaleString()}점</td><td>${r.date}</td></tr>`;
-    }
-    body.innerHTML=`<table class="rtable">
-      <thead><tr><th>순위</th><th>닉네임</th><th>점수</th><th>날짜</th></tr></thead>
-      <tbody>${rows}</tbody></table>`;
-  }
-  document.getElementById('rankPopup').classList.add('show');
+function updateTimeDisplay() {
+const m = Math.floor(elapsedTime / 60), s = elapsedTime % 60;
+const t = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+document.getElementById('time').textContent = t;
+return t;
 }
 
-// ── 닉네임 등록 ───────────────────────────────────────
-function bindSubmit(inputId, btnId, alertEl) {
-  const input = document.getElementById(inputId);
-  const btn   = document.getElementById(btnId);
-  const go = async () => {
-    const name = input.value.trim();
-    if (!name) { input.style.borderColor='#dc3545'; input.focus(); return; }
-    input.style.borderColor='#ccc';
-    btn.disabled=true; btn.textContent='저장 중...';
-    myRankId = await fbSave(gs.score, name);
-    alertEl.querySelector('.name-row').style.display='none';
-    await renderRanking();
-    await showRankPopup();
-    btn.disabled=false; btn.textContent='등록 🏆';
-  };
-  btn.addEventListener('click', go);
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter') go(); });
+function random() {
+const ts = Object.keys(THEMES);
+return {theme: ts[Math.floor(Math.random()*ts.length)], level: Math.floor(Math.random()*3)};
 }
 
-// ── 게임 상태 ─────────────────────────────────────────
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreEl     = document.getElementById('score');
-const finalScoreEl= document.getElementById('finalScore');
-const winScoreEl  = document.getElementById('winScore');
-const gameOverBox = document.getElementById('gameOverBox');
-const winBox      = document.getElementById('winBox');
-
-const W=400, H=450, GRAVITY=0.4, GAMEOVER_Y=100;
-
-const fruitTypes=[
-  {emoji:'🍒',  radius:15, points:1 },
-  {emoji:'🍋‍🟩', radius:20, points:3 },
-  {emoji:'🍇',  radius:20, points:6 },
-  {emoji:'🍊',  radius:25, points:10},
-  {emoji:'🍋',  radius:30, points:15},
-  {emoji:'🍎',  radius:35, points:21},
-  {emoji:'🍑',  radius:40, points:28},
-  {emoji:'🍍',  radius:55, points:36},
-  {emoji:'🥥',  radius:60, points:45},
-  {emoji:'🍈',  radius:70, points:55},
-  {emoji:'🍉',  radius:80, points:75},
-];
-
-function newState() {
-  return { fruits:[], dropping:false, mouseX:200, frame:0,
-           score:0, gameOver:false, won:false,
-           nextFruit:Math.floor(Math.random()*5),
-           winMelon:null, explodeFrame:0 };
+function render() {
+document.getElementById('score').textContent = score;
+document.getElementById('hintCount').textContent = hints.length;
+if (current) {
+document.getElementById('nextEmoji').textContent = THEMES[current.theme][current.level];
+document.getElementById('nextName').textContent  = NAMES[current.theme];
+document.getElementById('nextLevel').textContent = `Lv.${current.level + 1}`;
 }
-let gs=newState(), rafId=null;
-
-function triggerGameOver() {
-  if(gs.gameOver) return;
-  gs.gameOver=true;
-  finalScoreEl.textContent=gs.score;
-  gameOverBox.style.display='block';
+if (success) {
+document.getElementById('gameSuccessBox').style.display = 'block';
+document.getElementById('gameOverBox').style.display    = 'none';
+document.getElementById('gameEndBox').style.display     = 'none';
+document.getElementById('successScore').textContent = score;
+document.getElementById('successTime').textContent  = updateTimeDisplay();
+} else if (ended) {
+document.getElementById('gameEndBox').style.display     = 'block';
+document.getElementById('gameSuccessBox').style.display = 'none';
+document.getElementById('gameOverBox').style.display    = 'none';
+document.getElementById('endLevel').textContent = getMaxLevel();
+document.getElementById('endScore').textContent = score;
+document.getElementById('endTime').textContent  = updateTimeDisplay();
+} else if (over) {
+document.getElementById('gameOverBox').style.display    = 'block';
+document.getElementById('gameSuccessBox').style.display = 'none';
+document.getElementById('gameEndBox').style.display     = 'none';
+document.getElementById('finalScore').textContent = score;
+document.getElementById('finalTime').textContent  = updateTimeDisplay();
+} else {
+document.getElementById('gameOverBox').style.display    = 'none';
+document.getElementById('gameSuccessBox').style.display = 'none';
+document.getElementById('gameEndBox').style.display     = 'none';
 }
 
-// ── 게임 루프 ─────────────────────────────────────────
-function gameLoop() {
-  gs.frame++;
+const g = document.getElementById('grid');
+g.innerHTML = '';
+if (ended || over || success) return;
 
-  if(gs.winMelon) {
-    gs.explodeFrame++;
-    ctx.clearRect(0,0,W,H);
-    ctx.fillStyle='#fff5e6'; ctx.fillRect(0,0,W,H);
-    const m=gs.winMelon, p=gs.explodeFrame/60;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    if(p<0.5){
-      const sc=1+p*0.8;
-      ctx.font=`${m.radius*2*sc}px Arial`; ctx.fillText('🍉',m.x,m.y);
-      ctx.fillStyle='#ff6b6b'; ctx.font=`${30*sc}px Arial`; ctx.fillText('ㅋㅋㅋ',m.x,m.y-m.radius*1.5*sc);
-    } else if(p<1){
-      const ep=(p-0.5)*2;
-      for(let i=0;i<8;i++){
-        const a=(Math.PI*2*i)/8, d=ep*150;
-        ctx.font=`${30*(1-ep)}px Arial`;
-        ctx.fillText('💥',m.x+Math.cos(a)*d,m.y+Math.sin(a)*d);
-      }
-      ctx.font=`${80*(1-ep)}px Arial`; ctx.fillText('⭐',m.x,m.y);
-    } else {
-      gs.won=true;
-      winScoreEl.textContent=gs.score;
-      winBox.style.display='block';
-    }
-    rafId=requestAnimationFrame(gameLoop); return;
-  }
-
-  if(gs.gameOver) return;
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#fff5e6'; ctx.fillRect(0,0,W,H);
-
-  ctx.fillStyle='#8b4513';
-  ctx.fillRect(0,0,10,H); ctx.fillRect(W-10,0,10,H); ctx.fillRect(0,H-10,W,10);
-
-  ctx.strokeStyle='#ff0000'; ctx.setLineDash([5,5]); ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(10,GAMEOVER_Y); ctx.lineTo(W-10,GAMEOVER_Y); ctx.stroke();
-  ctx.setLineDash([]);
-
-  if(!gs.dropping){
-    const f=fruitTypes[gs.nextFruit];
-    ctx.font=`${f.radius*2}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(f.emoji,gs.mouseX,50);
-  }
-
-  gs.fruits.forEach(fruit=>{
-    fruit.vy+=GRAVITY;
-    const onGround=fruit.y+fruit.radius>=H-11;
-    const onOther=gs.fruits.some(o=>{
-      if(o===fruit) return false;
-      const dx=o.x-fruit.x, dy=o.y-fruit.y;
-      return Math.sqrt(dx*dx+dy*dy)<fruit.radius+o.radius+2;
-    });
-    fruit.isMoving=Math.abs(fruit.vy)>0.5||Math.abs(fruit.vx)>0.5;
-    if(onGround||onOther){fruit.vy*=0.7;fruit.vx*=0.6;}
-    else{fruit.vy*=0.98;fruit.vx*=0.96;}
-    fruit.x+=fruit.vx; fruit.y+=fruit.vy;
-    if(fruit.x-fruit.radius<10){fruit.x=10+fruit.radius;fruit.vx=Math.abs(fruit.vx)*0.2;}
-    if(fruit.x+fruit.radius>W-10){fruit.x=W-10-fruit.radius;fruit.vx=-Math.abs(fruit.vx)*0.2;}
-    if(fruit.y+fruit.radius>H-10){
-      fruit.y=H-10-fruit.radius;
-      fruit.vy=-Math.abs(fruit.vy)*0.05; fruit.vx*=0.6;
-      if(Math.abs(fruit.vy)<0.3&&Math.abs(fruit.vx)<0.3){fruit.vy=0;fruit.vx=0;}
-    }
-    fruit.isColliding=fruit.lastHit&&(Date.now()-fruit.lastHit<1000);
-  });
-
-  for(let it=0;it<3;it++){
-    for(let i=0;i<gs.fruits.length;i++){
-      for(let j=i+1;j<gs.fruits.length;j++){
-        const a=gs.fruits[i],b=gs.fruits[j];
-        const dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy),minD=a.radius+b.radius;
-        if(dist<minD&&dist>0){
-          if(a.type===b.type&&a.type<10&&!a.merging&&!b.merging){
-            a.merging=b.merging=true;
-            const nt=a.type+1,mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
-            setTimeout(()=>{
-              const i1=gs.fruits.indexOf(a);if(i1!==-1)gs.fruits.splice(i1,1);
-              const i2=gs.fruits.indexOf(b);if(i2!==-1)gs.fruits.splice(i2,1);
-              const nf={x:mx,y:my,vx:0,vy:0,type:nt,radius:fruitTypes[nt].radius,
-                        merging:false,isMoving:false,isColliding:false,lastHit:null,spawnTime:Date.now()};
-              gs.fruits.push(nf);
-              gs.score+=fruitTypes[nt].points;
-              scoreEl.textContent=gs.score;
-              if(nt===10){gs.winMelon=nf;gs.explodeFrame=0;}
-            },50);
-            continue;
-          }
-          const ov=minD-dist,nx=dx/dist,ny=dy/dist;
-          const sp=Math.abs(a.vx)+Math.abs(a.vy)+Math.abs(b.vx)+Math.abs(b.vy);
-          if(sp>2){a.lastHit=b.lastHit=Date.now();}
-          a.x-=nx*ov*0.5;a.y-=ny*ov*0.5;b.x+=nx*ov*0.5;b.y+=ny*ov*0.5;
-          const rv=b.vx-a.vx,ry=b.vy-a.vy,dot=rv*nx+ry*ny;
-          if(dot<0){const imp=dot*0.15;a.vx+=imp*nx;a.vy+=imp*ny;b.vx-=imp*nx;b.vy-=imp*ny;}
-          const cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-          a.x=cl(a.x,10+a.radius,W-10-a.radius);a.y=cl(a.y,a.radius,H-10-a.radius);
-          b.x=cl(b.x,10+b.radius,W-10-b.radius);b.y=cl(b.y,b.radius,H-10-b.radius);
-        }
-      }
-    }
-  }
-
-  gs.fruits.forEach(fruit=>{
-    if(fruit.merging) return;
-    const type=fruitTypes[fruit.type];
-    ctx.save();
-    ctx.translate(fruit.x,fruit.y); ctx.rotate(0);
-    ctx.font=`${fruit.radius*2}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(type.emoji,0,0);
-    ctx.restore();
-
-    ctx.fillStyle='#000';
-    const eyeY=fruit.y-fruit.radius*0.2,eyeSz=fruit.isColliding?fruit.radius*0.25:fruit.radius*0.15;
-    ctx.beginPath();ctx.arc(fruit.x-fruit.radius*0.3,eyeY,eyeSz,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(fruit.x+fruit.radius*0.3,eyeY,eyeSz,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#000';ctx.lineWidth=fruit.radius*0.1;
-    if(fruit.isColliding){
-      ctx.beginPath();ctx.moveTo(fruit.x,fruit.y+fruit.radius*0.1);
-      ctx.lineTo(fruit.x-fruit.radius*0.15,fruit.y+fruit.radius*0.35);
-      ctx.lineTo(fruit.x+fruit.radius*0.15,fruit.y+fruit.radius*0.35);
-      ctx.closePath();ctx.stroke();
-    } else {
-      ctx.beginPath();ctx.arc(fruit.x,fruit.y+fruit.radius*0.2,fruit.radius*0.3,0,Math.PI);ctx.stroke();
-    }
-    ctx.strokeStyle='#000';ctx.lineWidth=fruit.radius*0.15;ctx.lineCap='round';
-    const wave=fruit.isMoving?Math.sin(gs.frame*0.3)*0.3:0;
-    ctx.beginPath();ctx.moveTo(fruit.x-fruit.radius*0.7,fruit.y);
-    ctx.lineTo(fruit.x-fruit.radius*1.1,fruit.y-fruit.radius*(0.3+wave));ctx.stroke();
-    ctx.beginPath();ctx.moveTo(fruit.x+fruit.radius*0.7,fruit.y);
-    ctx.lineTo(fruit.x+fruit.radius*1.1,fruit.y-fruit.radius*(0.3-wave));ctx.stroke();
-  });
-
-  const now=Date.now();
-  for(const fruit of gs.fruits){
-    if(fruit.merging||now-fruit.spawnTime<1500) continue;
-    if(Math.abs(fruit.vy)>0.8||Math.abs(fruit.vx)>0.8) continue;
-    if(fruit.y-fruit.radius<GAMEOVER_Y){triggerGameOver();return;}
-  }
-  rafId=requestAnimationFrame(gameLoop);
+for (let r = 0; r < H; r++) {
+for (let c = 0; c < W; c++) {
+const cell = document.createElement('div');
+cell.className = 'cell';
+const item = grid[r][c];
+if (item) { cell.classList.add('has-item'); cell.textContent = THEMES[item.theme][item.level]; }
+if (selected && selected.r===r && selected.c===c) cell.classList.add('selected');
+if (hints.find(h => h.r===r && h.c===c)) cell.classList.add('hint');
+cell.onclick = () => click(r, c);
+g.appendChild(cell);
+}
+}
+fitGrid(); // 렌더 후 크기 맞추기
 }
 
-// ── 입력 ─────────────────────────────────────────────
-canvas.addEventListener('mousemove',e=>{
-  if(gs.gameOver) return;
-  const rect=canvas.getBoundingClientRect(),sx=W/rect.width;
-  const x=(e.clientX-rect.left)*sx,r=fruitTypes[gs.nextFruit].radius;
-  gs.mouseX=Math.max(10+r,Math.min(W-10-r,x));
+function click(r, c) {
+if (over || success || ended) return;
+const isHint = hints.find(h => h.r===r && h.c===c);
+if (!isHint) { hints = []; if (timer) clearTimeout(timer); }
+
+if (selected) {
+if (selected.r===r && selected.c===c) { selected = null; render(); if (!isHint) startHint(); return; }
+const tgt = grid[r][c], sel = selected.item;
+if (tgt && tgt.theme===sel.theme && tgt.level===sel.level && sel.level<14) {
+const nl = sel.level+1;
+grid[r][c] = {theme:sel.theme, level:nl};
+grid[selected.r][selected.c] = null;
+score += nl*10;
+if (nl===14) { success=true; clearInterval(timeInterval); render(); return; }
+selected=null; hints=[]; render(); checkOver(); startHint();
+} else if (!tgt) {
+grid[r][c]=sel; grid[selected.r][selected.c]=null; selected=null; render(); startHint();
+} else {
+grid[r][c]=sel; grid[selected.r][selected.c]=tgt; selected=null; render(); startHint();
+}
+return;
+}
+
+if (current) {
+const tgt = grid[r][c];
+if (tgt && tgt.theme===current.theme && tgt.level===current.level && current.level<14) {
+const nl = current.level+1;
+grid[r][c] = {theme:current.theme, level:nl};
+score += nl*10;
+if (nl===14) { success=true; clearInterval(timeInterval); render(); return; }
+current=random(); hints=[]; render(); checkOver(); startHint();
+} else if (!tgt) {
+grid[r][c]=current; current=random(); render(); checkOver(); startHint();
+} else {
+selected={r,c,item:tgt}; render(); if (!isHint) startHint();
+}
+} else if (grid[r][c]) {
+selected={r,c,item:grid[r][c]}; render(); if (!isHint) startHint();
+}
+}
+
+function checkOver() {
+let empty=false;
+outer: for (let r=0;r<H;r++) for (let c=0;c<W;c++) if (!grid[r][c]) { empty=true; break outer; }
+if (empty) return;
+for (let r=0;r<H;r++) for (let c=0;c<W;c++) {
+const cell=grid[r][c]; if (cell.level>=14) continue;
+if (r>0   && grid[r-1][c] && grid[r-1][c].theme===cell.theme && grid[r-1][c].level===cell.level) return;
+if (r<H-1 && grid[r+1][c] && grid[r+1][c].theme===cell.theme && grid[r+1][c].level===cell.level) return;
+if (c>0   && grid[r][c-1] && grid[r][c-1].theme===cell.theme && grid[r][c-1].level===cell.level) return;
+if (c<W-1 && grid[r][c+1] && grid[r][c+1].theme===cell.theme && grid[r][c+1].level===cell.level) return;
+}
+over=true; clearInterval(timeInterval); render();
+}
+
+function startHint() {
+if (timer) clearTimeout(timer);
+timer = setTimeout(() => {
+const map = new Map();
+for (let r=0;r<H;r++) for (let c=0;c<W;c++) {
+const cell=grid[r][c]; if (!cell||cell.level>=14) continue;
+const k=`${cell.theme}-${cell.level}`;
+if (!map.has(k)) map.set(k,[]);
+map.get(k).push({r,c});
+}
+for (const [,ps] of map) {
+if (ps.length>=2) { hints=ps.sort(()=>Math.random()-.5).slice(0,2); render(); return; }
+}
+hints=[]; render();
+            }, 2000);
+            }, 10000);
+}
+
+function fillEmpty() {
+if (over||success||ended) return;
+for (let r=0;r<H;r++) for (let c=0;c<W;c++) if (!grid[r][c]) grid[r][c]=random();
+render(); checkOver(); startHint();
+}
+
+function resetGame() {
+if (timer) clearTimeout(timer);
+if (timeInterval) clearInterval(timeInterval);
+lastSubmittedId=null; init();
+}
+
+window.endGame   = () => { document.getElementById('confirmPopup').style.display='flex'; };
+window.hideConfirm = () => { document.getElementById('confirmPopup').style.display='none'; };
+window.confirmEnd  = () => {
+document.getElementById('confirmPopup').style.display='none';
+if (timer) clearTimeout(timer);
+if (timeInterval) clearInterval(timeInterval);
+ended=true; render();
+};
+
+async function submitRanking(type) {
+const field = type==='success' ? document.getElementById('nameInputFieldSuccess')
+: type==='end'     ? document.getElementById('nameInputFieldEnd')
+: document.getElementById('nameInputFieldOver');
+const btn  = field.nextElementSibling;
+const name = field.value.trim();
+if (!name) { alert('닉네임을 입력해주세요!'); return; }
+btn.disabled=true; btn.textContent='등록 중...';
+try {
+const record = { name, score, time:elapsedTime, level:success?15:getMaxLevel(), timestamp:Date.now(), date:new Date().toISOString() };
+if (firebaseReady && db) {
+try {
+const ref=await db.collection('rankings').add(record);
+lastSubmittedId=ref.id;
+alert('글로벌 랭킹에 등록되었습니다! 🎉');
+} catch(e) {
+alert('Firebase 오류: ' + e.message);
+btn.disabled=false; btn.textContent='🏆 랭킹 등록'; return;
+}
+} else {
+alert('Firebase가 연결되지 않았습니다.\n.html 파일로 저장 후 웹에서 열어주세요.');
+btn.disabled=false; btn.textContent='🏆 랭킹 등록'; return;
+}
+field.value=''; showRanking();
+} catch(e){ alert('랭킹 등록에 실패했습니다.\n오류: '+e.message); }
+finally { btn.disabled=false; btn.textContent='🏆 랭킹 등록'; }
+}
+
+
+function getMaxLevel() {
+let m=0;
+for (let r=0;r<H;r++) for (let c=0;c<W;c++) if (grid[r][c]&&grid[r][c].level>m) m=grid[r][c].level;
+return m+1;
+}
+
+async function showRanking() {
+const content=document.getElementById('rankingContent');
+const isF=firebaseReady&&db;
+const title=document.querySelector('#rankingPopup .popup-title');
+if (title) title.textContent='🏆 글로벌 랭킹 (Top 10)';
+content.innerHTML='<div class="loading">랭킹 불러오는 중...</div>';
+document.getElementById('rankingPopup').style.display='flex';
+try {
+let rankings=[];
+if (isF) {
+try {
+const snap=await db.collection('rankings').orderBy('level','desc').orderBy('time','asc').orderBy('score','desc').limit(50).get();
+snap.forEach(d=>rankings.push({id:d.id,...d.data()}));
+} catch(e){ content.innerHTML='<p style="text-align:center;color:#ef4444;padding:20px;">랭킹을 불러오지 못했습니다.</p>'; return; }
+} else {
+content.innerHTML='<p style="text-align:center;color:#666;padding:20px;">Firebase 연결 중입니다. 잠시 후 다시 시도해주세요.</p>'; return;
+}
+const myIndex = lastSubmittedId ? rankings.findIndex(r=>r.id===lastSubmittedId) : -1;
+const top10 = rankings.slice(0, 10);
+
+if (!top10.length) { content.innerHTML='<p style="text-align:center;color:#666;padding:20px;">아직 등록된 랭킹이 없습니다.</p>'; return; }
+let html='<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>시간</th><th>점수</th></tr></thead><tbody>';
+top10.forEach((rec,i)=>{
+const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+const m=Math.floor(rec.time/60), s=rec.time%60;
+const t=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+html+=`<tr class="${lastSubmittedId&&rec.id===lastSubmittedId?'my-record':''}"><td class="rank-medal">${medal}</td><td>${rec.name}</td><td>Lv.${rec.level}</td><td>${t}</td><td>${rec.score}</td></tr>`;
 });
-canvas.addEventListener('touchmove',e=>{
-  if(gs.gameOver) return; e.preventDefault();
-  const rect=canvas.getBoundingClientRect(),sx=W/rect.width;
-  const x=(e.touches[0].clientX-rect.left)*sx,r=fruitTypes[gs.nextFruit].radius;
-  gs.mouseX=Math.max(10+r,Math.min(W-10-r,x));
-},{passive:false});
+html+='</tbody></table>';
 
-function dropFruit(){
-  if(gs.gameOver||gs.won||gs.dropping) return;
-  const f=fruitTypes[gs.nextFruit];
-  gs.fruits.push({x:gs.mouseX,y:50,vx:0,vy:0,type:gs.nextFruit,radius:f.radius,
-                  merging:false,isMoving:true,isColliding:false,lastHit:null,spawnTime:Date.now()});
-  gs.dropping=true;
-  setTimeout(()=>{gs.dropping=false;gs.nextFruit=Math.floor(Math.random()*5);},500);
+// 내 순위가 10위 밖이면 따로 표시
+if (myIndex >= 10) {
+const rec = rankings[myIndex];
+const m=Math.floor(rec.time/60), s=rec.time%60;
+const t=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+html+=`<div style="margin-top:12px;padding:10px;background:#fef3c7;border-radius:8px;text-align:center;font-size:13px;">
+                       <div style="color:#92400e;font-weight:bold;margin-bottom:4px;">📍 내 순위: ${myIndex+1}위</div>
+                       <div style="color:#666;">${rec.name} | Lv.${rec.level} | ${t} | ${rec.score}점</div>
+                   </div>`;
 }
-canvas.addEventListener('click',dropFruit);
-canvas.addEventListener('touchend',e=>{e.preventDefault();dropFruit();});
-
-// ── 리셋 ─────────────────────────────────────────────
-function doReset(){
-  if(rafId) cancelAnimationFrame(rafId);
-  myRankId=null; gs=newState();
-  scoreEl.textContent='0';
-  gameOverBox.style.display='none'; winBox.style.display='none';
-  gameOverBox.querySelector('.name-row').style.display='flex';
-  winBox.querySelector('.name-row').style.display='flex';
-  document.getElementById('overName').value='';
-  document.getElementById('winName').value='';
-  gameLoop();
+if (!isF) html+='<p style="text-align:center;color:#666;font-size:11px;margin-top:12px;">💾 로컬 저장 모드</p>';
+content.innerHTML=html;
+} catch(e){ content.innerHTML='<p style="text-align:center;color:#ef4444;padding:20px;">랭킹 불러오기 실패</p>'; }
 }
 
-document.getElementById('resetBtn').addEventListener('click',doReset);
-document.getElementById('resetBtn2').addEventListener('click',doReset);
+function hideRanking() { document.getElementById('rankingPopup').style.display='none'; }
 
-// ── 종료 ─────────────────────────────────────────────
-document.getElementById('endBtn').addEventListener('click',()=>{
-  document.getElementById('confirmOverlay').classList.add('show');
-});
-document.getElementById('confirmNo').addEventListener('click',()=>{
-  document.getElementById('confirmOverlay').classList.remove('show');
-});
-document.getElementById('confirmYes').addEventListener('click',()=>{
-  document.getElementById('confirmOverlay').classList.remove('show');
-  if(rafId) cancelAnimationFrame(rafId);
-  gs.gameOver=true;
-  finalScoreEl.textContent=gs.score;
-  gameOverBox.style.display='block';
+function showHelp() {
+const content=document.getElementById('evolutionContent');
+content.innerHTML='';
+for (const [tk,emojis] of Object.entries(THEMES)) {
+const sec=document.createElement('div'); sec.className='theme-section';
+const tit=document.createElement('div'); tit.className='theme-title'; tit.textContent=NAMES[tk];
+sec.appendChild(tit);
+const chain=document.createElement('div'); chain.className='evolution-chain';
+for (let i=0;i<15;i++) {
+const item=document.createElement('div'); item.className='evo-item';
+const em=document.createElement('div'); em.className='evo-emoji'; em.textContent=emojis[i];
+const lv=document.createElement('div'); lv.className='evo-level'; lv.textContent=`Lv.${i+1}`;
+item.appendChild(em); item.appendChild(lv); chain.appendChild(item);
+if (i<14) { const ar=document.createElement('div'); ar.className='arrow'; ar.textContent='→'; chain.appendChild(ar); }
+}
+sec.appendChild(chain); content.appendChild(sec);
+}
+document.getElementById('helpPopup').style.display='flex';
+}
+
+function hideHelp() { document.getElementById('helpPopup').style.display='none'; }
+
+document.addEventListener('DOMContentLoaded', () => {
+document.getElementById('rankingPopup').addEventListener('click', e=>{ if(e.target===e.currentTarget) hideRanking(); });
+document.getElementById('helpPopup').addEventListener('click',   e=>{ if(e.target===e.currentTarget) hideHelp(); });
+document.getElementById('fillBtn').addEventListener('click',    fillEmpty);
+document.getElementById('resetBtn').addEventListener('click',   resetGame);
+document.getElementById('endBtn').addEventListener('click',     endGame);
+document.getElementById('rankingBtn').addEventListener('click', showRanking);
 });
 
-// ── 랭킹 팝업 ─────────────────────────────────────────
-document.getElementById('rankBtn').addEventListener('click', showRankPopup);
-document.getElementById('closeRank').addEventListener('click',()=>{
-  document.getElementById('rankPopup').classList.remove('show');
-});
-document.getElementById('rankPopup').addEventListener('click',e=>{
-  if(e.target===document.getElementById('rankPopup'))
-    document.getElementById('rankPopup').classList.remove('show');
-});
+function setVH() {
+document.documentElement.style.setProperty('--vh', (window.innerHeight*0.01)+'px');
+}
 
-// ── 닉네임 바인딩 ─────────────────────────────────────
-bindSubmit('overName','overSubmit',gameOverBox);
-bindSubmit('winName', 'winSubmit', winBox);
+// 리사이즈 시 그리드 재계산
+window.addEventListener('resize', ()=>{ setVH(); fitGrid(); });
+window.addEventListener('orientationchange', ()=>{ setVH(); setTimeout(fitGrid, 300); });
 
-// ── 시작 ─────────────────────────────────────────────
-renderRanking();
-gameLoop();
+setVH();
+init();
 </script>
 </body>
 </html>
