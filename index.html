@@ -97,7 +97,17 @@
         .score-text { color: #ec4899; font-size: 16px; font-weight: bold; }
         @media (max-width: 480px) { .score-text { font-size: 14px; } }
         .hint-text { color: #22c55e; font-size: 10px; }
-        .time-text { color: #3b82f6; font-size: 10px; }
+        .time-text { color: #3b82f6; font-size: 12px; font-weight: bold; transition: color 0.3s; }
+        .time-text.urgent {
+            color: #dc2626;
+            font-weight: 900;
+            font-size: 14px;
+            animation: urgentPulse 0.5s infinite alternate;
+        }
+        @keyframes urgentPulse {
+            from { color: #dc2626; }
+            to { color: #ff6b6b; }
+        }
         .game-success {
             background: linear-gradient(to right, #d9f99d, #bef264);
             border-radius: 12px;
@@ -118,6 +128,16 @@
             flex-shrink: 0;
         }
         .game-over h2 { color: #b91c1c; font-size: 20px; margin-bottom: 2px; }
+        .game-timeout {
+            background: linear-gradient(to right, #fde68a, #fca5a5);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            margin-bottom: 6px;
+            display: none;
+            flex-shrink: 0;
+        }
+        .game-timeout h2 { color: #92400e; font-size: 20px; margin-bottom: 2px; }
         .grid-container {
             background: white;
             border: 2px solid #d8b4fe;
@@ -275,7 +295,7 @@
             <h1>머지 게임</h1>
             <div class="score">
                 <div class="score-text">점수: <span id="score">0</span></div>
-                <div class="time-text">시간: <span id="time">00:00</span></div>
+                <div class="time-text" id="timeDisplay">⏱️ 남은시간: <span id="time">03:00</span></div>
                 <div class="hint-text">힌트: <span id="hintCount">0</span>개</div>
             </div>
         </div>
@@ -302,7 +322,7 @@
         <div id="gameSuccessBox" class="game-success">
             <h2>🎉 Lv.15 성공!</h2>
             <div style="font-size:16px;color:#365314;margin-bottom:8px;">
-                점수: <span id="successScore">0</span> | 시간: <span id="successTime">00:00</span>
+                점수: <span id="successScore">0</span> | 남은시간: <span id="successTime">00:00</span>
             </div>
             <div class="name-input-container">
                 <input type="text" id="nameInputFieldSuccess" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
@@ -313,7 +333,7 @@
         <div id="gameOverBox" class="game-over">
             <h2>게임 오버!</h2>
             <div style="font-size:16px;color:#666;margin-bottom:8px;">
-                점수: <span id="finalScore">0</span> | 시간: <span id="finalTime">00:00</span>
+                점수: <span id="finalScore">0</span> | 최고 레벨: Lv.<span id="finalLevel">1</span>
             </div>
             <div class="name-input-container">
                 <input type="text" id="nameInputFieldOver" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
@@ -321,10 +341,21 @@
             </div>
         </div>
 
+        <div id="gameTimeoutBox" class="game-timeout">
+            <h2>⏰ 시간 종료!</h2>
+            <div style="font-size:16px;color:#92400e;margin-bottom:8px;">
+                최고 레벨: Lv.<span id="timeoutLevel">1</span> | 점수: <span id="timeoutScore">0</span>
+            </div>
+            <div class="name-input-container">
+                <input type="text" id="nameInputFieldTimeout" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
+                <button class="submit-btn" id="submitTimeout">🏆 랭킹 등록</button>
+            </div>
+        </div>
+
         <div id="gameEndBox" class="game-over">
             <h2>⏹️ 게임 종료</h2>
             <div style="font-size:16px;color:#666;margin-bottom:8px;">
-                최고 레벨: <span id="endLevel">1</span> | 점수: <span id="endScore">0</span> | 시간: <span id="endTime">00:00</span>
+                최고 레벨: Lv.<span id="endLevel">1</span> | 점수: <span id="endScore">0</span>
             </div>
             <div class="name-input-container">
                 <input type="text" id="nameInputFieldEnd" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
@@ -387,6 +418,9 @@
     </script>
     <script>
         const GW = 7, GH = 9;
+        const TIME_LIMIT = 180; // 3분
+        const URGENT_THRESHOLD = 30; // 30초 이하면 긴급 표시
+
         const THEMES = {
             fruit:   ['🍇','🍓','🍒','🍊','🍋','🍌','🍎','🍉','🍑','🍍','🥝','🥥','🍈','🥭','🫐'],
             animal:  ['🐭','🐹','🐰','🦊','🐱','🐶','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵'],
@@ -399,8 +433,8 @@
         };
         const NAMES = {fruit:'과일',animal:'동물',seafood:'해산물',heart:'하트',hand:'손',sports:'스포츠',food:'음식',vehicle:'탈것'};
 
-        let grid, current, score, selected, over, hints, hintTimer, success, ended;
-        let startTime, elapsedTime = 0, timeInterval;
+        let grid, current, score, selected, over, hints, hintTimer, success, ended, timedOut;
+        let remainingTime, timeInterval;
         let lastSubmittedId = null;
 
         function fitGrid() {
@@ -421,27 +455,52 @@
             for (let r = 0; r < GH; r++)
                 for (let c = 0; c < GW; c++)
                     grid[r][c] = random();
-            score = 0; selected = null; over = false; success = false; ended = false; hints = [];
+            score = 0; selected = null; over = false; success = false; ended = false; timedOut = false;
+            hints = [];
             current = random();
-            elapsedTime = 0; startTime = Date.now();
+            remainingTime = TIME_LIMIT;
             startTimer(); render(); startHint();
         }
 
         function startTimer() {
             if (timeInterval) clearInterval(timeInterval);
             timeInterval = setInterval(() => {
-                if (!over && !success && !ended) {
-                    elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+                if (!over && !success && !ended && !timedOut) {
+                    remainingTime--;
                     updateTimeDisplay();
+                    if (remainingTime <= 0) {
+                        clearInterval(timeInterval);
+                        triggerTimeout();
+                    }
                 }
             }, 1000);
         }
 
+        function triggerTimeout() {
+            timedOut = true;
+            if (hintTimer) clearTimeout(hintTimer);
+            render();
+        }
+
         function updateTimeDisplay() {
-            const m = Math.floor(elapsedTime/60), s = elapsedTime%60;
+            const m = Math.floor(remainingTime / 60);
+            const s = remainingTime % 60;
             const t = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
             document.getElementById('time').textContent = t;
+
+            const display = document.getElementById('timeDisplay');
+            if (remainingTime <= URGENT_THRESHOLD) {
+                display.classList.add('urgent');
+            } else {
+                display.classList.remove('urgent');
+            }
             return t;
+        }
+
+        function getTimeStr() {
+            const m = Math.floor(remainingTime / 60);
+            const s = remainingTime % 60;
+            return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
         }
 
         function random() {
@@ -457,35 +516,35 @@
                 document.getElementById('nextName').textContent  = NAMES[current.theme];
                 document.getElementById('nextLevel').textContent = `Lv.${current.level+1}`;
             }
-            const t = updateTimeDisplay();
+            updateTimeDisplay();
+
+            // 모든 상태 박스 숨기기
+            document.getElementById('gameSuccessBox').style.display  = 'none';
+            document.getElementById('gameOverBox').style.display     = 'none';
+            document.getElementById('gameTimeoutBox').style.display  = 'none';
+            document.getElementById('gameEndBox').style.display      = 'none';
+
             if (success) {
                 document.getElementById('gameSuccessBox').style.display = 'block';
-                document.getElementById('gameOverBox').style.display    = 'none';
-                document.getElementById('gameEndBox').style.display     = 'none';
                 document.getElementById('successScore').textContent = score;
-                document.getElementById('successTime').textContent  = t;
+                document.getElementById('successTime').textContent  = getTimeStr();
+            } else if (timedOut) {
+                document.getElementById('gameTimeoutBox').style.display = 'block';
+                document.getElementById('timeoutLevel').textContent = getMaxLevel();
+                document.getElementById('timeoutScore').textContent = score;
             } else if (ended) {
-                document.getElementById('gameEndBox').style.display     = 'block';
-                document.getElementById('gameSuccessBox').style.display = 'none';
-                document.getElementById('gameOverBox').style.display    = 'none';
+                document.getElementById('gameEndBox').style.display = 'block';
                 document.getElementById('endLevel').textContent = getMaxLevel();
                 document.getElementById('endScore').textContent = score;
-                document.getElementById('endTime').textContent  = t;
             } else if (over) {
-                document.getElementById('gameOverBox').style.display    = 'block';
-                document.getElementById('gameSuccessBox').style.display = 'none';
-                document.getElementById('gameEndBox').style.display     = 'none';
+                document.getElementById('gameOverBox').style.display = 'block';
                 document.getElementById('finalScore').textContent = score;
-                document.getElementById('finalTime').textContent  = t;
-            } else {
-                document.getElementById('gameOverBox').style.display    = 'none';
-                document.getElementById('gameSuccessBox').style.display = 'none';
-                document.getElementById('gameEndBox').style.display     = 'none';
+                document.getElementById('finalLevel').textContent = getMaxLevel();
             }
 
             const g = document.getElementById('grid');
             g.innerHTML = '';
-            if (ended || over || success) return;
+            if (ended || over || success || timedOut) return;
 
             for (let r = 0; r < GH; r++) {
                 for (let c = 0; c < GW; c++) {
@@ -503,7 +562,7 @@
         }
 
         function clickCell(r, c) {
-            if (over || success || ended) return;
+            if (over || success || ended || timedOut) return;
             const isHint = hints.find(h => h.r===r && h.c===c);
             if (!isHint) { hints = []; if (hintTimer) clearTimeout(hintTimer); }
 
@@ -575,7 +634,7 @@
         }
 
         function fillEmpty() {
-            if(over||success||ended) return;
+            if(over||success||ended||timedOut) return;
             for(let r=0;r<GH;r++) for(let c=0;c<GW;c++) if(!grid[r][c]) grid[r][c]=random();
             render(); checkOver(); startHint();
         }
@@ -593,20 +652,17 @@
         }
 
         async function submitRanking(type) {
-            const fieldId = type==='success' ? 'nameInputFieldSuccess'
-                          : type==='end'     ? 'nameInputFieldEnd'
-                                             : 'nameInputFieldOver';
-            const btnId   = type==='success' ? 'submitSuccess'
-                          : type==='end'     ? 'submitEnd'
-                                             : 'submitOver';
-            const field = document.getElementById(fieldId);
-            const btn   = document.getElementById(btnId);
+            const fieldMap = { success:'nameInputFieldSuccess', over:'nameInputFieldOver', timeout:'nameInputFieldTimeout', end:'nameInputFieldEnd' };
+            const btnMap   = { success:'submitSuccess', over:'submitOver', timeout:'submitTimeout', end:'submitEnd' };
+            const field = document.getElementById(fieldMap[type]);
+            const btn   = document.getElementById(btnMap[type]);
             const name  = field.value.trim();
             if (!name) { alert('닉네임을 입력해주세요!'); return; }
             btn.disabled=true; btn.textContent='등록 중...';
             try {
+                const usedTime = TIME_LIMIT - remainingTime;
                 const record = {
-                    name, score, time: elapsedTime,
+                    name, score, time: usedTime,
                     level: success ? 15 : getMaxLevel(),
                     timestamp: Date.now(), date: new Date().toISOString()
                 };
@@ -627,20 +683,20 @@
             document.getElementById('rankingPopup').classList.add('show');
             try {
                 const snap = await window.db.collection('rankings')
-                    .orderBy('level','desc').orderBy('time','asc').orderBy('score','desc')
+                    .orderBy('level','desc').orderBy('score','desc').orderBy('time','asc')
                     .limit(50).get();
                 const rankings = snap.docs.map(d=>({id:d.id,...d.data()}));
                 const myIndex  = lastSubmittedId ? rankings.findIndex(r=>r.id===lastSubmittedId) : -1;
                 const top10    = rankings.slice(0,10);
                 if (!top10.length) { content.innerHTML='<p style="text-align:center;color:#666;padding:20px;">아직 등록된 랭킹이 없습니다.</p>'; return; }
                 const medals = ['🥇','🥈','🥉'];
-                let html = '<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>시간</th><th>점수</th></tr></thead><tbody>';
+                let html = '<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>점수</th><th>사용시간</th></tr></thead><tbody>';
                 top10.forEach((rec,i)=>{
                     const medal = medals[i] ?? (i+1);
                     const m=Math.floor(rec.time/60), s=rec.time%60;
                     const t=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
                     const mine = lastSubmittedId && rec.id===lastSubmittedId;
-                    html+=`<tr class="${mine?'my-record':''}"><td class="rank-medal">${medal}</td><td>${rec.name}</td><td>Lv.${rec.level}</td><td>${t}</td><td>${rec.score}</td></tr>`;
+                    html+=`<tr class="${mine?'my-record':''}"><td class="rank-medal">${medal}</td><td>${rec.name}</td><td>Lv.${rec.level}</td><td>${rec.score}</td><td>${t}</td></tr>`;
                 });
                 html+='</tbody></table>';
                 if (myIndex>=10) {
@@ -649,7 +705,7 @@
                     const t=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
                     html+=`<div style="margin-top:12px;padding:10px;background:#fef3c7;border-radius:8px;text-align:center;font-size:13px;">
                         <div style="color:#92400e;font-weight:bold;margin-bottom:4px;">📍 내 순위: ${myIndex+1}위</div>
-                        <div style="color:#666;">${rec.name} | Lv.${rec.level} | ${t} | ${rec.score}점</div>
+                        <div style="color:#666;">${rec.name} | Lv.${rec.level} | ${rec.score}점 | ${t}</div>
                     </div>`;
                 }
                 content.innerHTML=html;
@@ -688,6 +744,7 @@
         document.getElementById('helpPopup').addEventListener('click', e=>{ if(e.target===e.currentTarget) document.getElementById('helpPopup').classList.remove('show'); });
         document.getElementById('submitSuccess').addEventListener('click', ()=>submitRanking('success'));
         document.getElementById('submitOver').addEventListener('click',    ()=>submitRanking('over'));
+        document.getElementById('submitTimeout').addEventListener('click', ()=>submitRanking('timeout'));
         document.getElementById('submitEnd').addEventListener('click',     ()=>submitRanking('end'));
         document.getElementById('endBtn').addEventListener('click', ()=>document.getElementById('confirmPopup').style.display='flex');
         document.getElementById('confirmNo').addEventListener('click',  ()=>document.getElementById('confirmPopup').style.display='none');
