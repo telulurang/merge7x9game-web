@@ -740,7 +740,12 @@
                 }
                 content.innerHTML=html;
             } catch(e) {
-                content.innerHTML='<p style="text-align:center;color:#ef4444;padding:20px;">랭킹을 불러오지 못했습니다.</p>';
+                content.innerHTML=`
+                    <div style="text-align:center;padding:20px;">
+                        <p style="color:#ef4444;font-weight:bold;margin-bottom:8px;">랭킹을 불러오지 못했습니다.</p>
+                        <p style="color:#999;font-size:12px;margin-bottom:16px;">오류: ${e.message}</p>
+                        <button onclick="showRanking()" style="padding:8px 20px;background:linear-gradient(to right,#9333ea,#ec4899);color:white;border:none;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;">🔄 다시 시도</button>
+                    </div>`;
             }
         }
 
