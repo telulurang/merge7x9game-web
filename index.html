@@ -713,7 +713,7 @@
             document.getElementById('rankingPopup').classList.add('show');
             try {
                 const snap = await window.db.collection('rankings')
-                    .orderBy('level','desc').orderBy('score','desc').orderBy('time','asc')
+                    .orderBy('level','desc').orderBy('time','asc').orderBy('score','desc')
                     .limit(50).get();
                 const rankings = snap.docs.map(d=>({id:d.id,...d.data()}));
                 const myIndex  = lastSubmittedId ? rankings.findIndex(r=>r.id===lastSubmittedId) : -1;
