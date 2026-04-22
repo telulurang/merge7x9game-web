@@ -603,15 +603,21 @@
         }
 
         function checkOver() {
-            let empty=false;
-            outer: for(let r=0;r<GH;r++) for(let c=0;c<GW;c++) if(!grid[r][c]){empty=true;break outer;}
-            if(empty) return;
+            // 빈칸이 있으면 이동 가능하므로 게임오버 아님
+            for(let r=0;r<GH;r++) for(let c=0;c<GW;c++) if(!grid[r][c]) return;
+            // next 아이템을 놓을 빈칸도 없고, 합칠 수 있는 같은 테마+레벨 쌍이 하나라도 있으면 게임오버 아님
+            // (이동을 통해 어디서든 합칠 수 있으므로, 같은 theme+level이 2개 이상이면 OK)
+            const map = new Map();
             for(let r=0;r<GH;r++) for(let c=0;c<GW;c++){
-                const cell=grid[r][c]; if(cell.level>=14) continue;
-                if(r>0    && grid[r-1][c] && grid[r-1][c].theme===cell.theme && grid[r-1][c].level===cell.level) return;
-                if(r<GH-1 && grid[r+1][c] && grid[r+1][c].theme===cell.theme && grid[r+1][c].level===cell.level) return;
-                if(c>0    && grid[r][c-1] && grid[r][c-1].theme===cell.theme && grid[r][c-1].level===cell.level) return;
-                if(c<GW-1 && grid[r][c+1] && grid[r][c+1].theme===cell.theme && grid[r][c+1].level===cell.level) return;
+                const cell=grid[r][c]; if(!cell||cell.level>=14) continue;
+                const k=`${cell.theme}-${cell.level}`;
+                map.set(k,(map.get(k)||0)+1);
+                if(map.get(k)>=2) return; // 합칠 수 있는 쌍 존재
+            }
+            // next 아이템과 같은 theme+level이 그리드에 있어도 합칠 수 있음
+            if(current && current.level<14){
+                const k=`${current.theme}-${current.level}`;
+                if(map.get(k)>=1) return;
             }
             over=true; clearInterval(timeInterval); render();
         }
