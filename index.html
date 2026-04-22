@@ -271,6 +271,13 @@
         }
         .submit-btn:hover { background: linear-gradient(to right, #7e22ce, #db2777); }
         .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .retry-msg {
+            margin-top: 8px; padding: 8px 12px;
+            background: #fef2f2; border: 1px solid #fca5a5;
+            border-radius: 8px; font-size: 13px; color: #dc2626;
+            display: none;
+        }
+        .retry-msg.show { display: block; }
         .my-record { background: #fef3c7 !important; font-weight: bold; }
         .loading { text-align: center; padding: 20px; color: #666; }
         .confirm-popup {
@@ -327,6 +334,7 @@
             <div class="name-input-container">
                 <input type="text" id="nameInputFieldSuccess" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
                 <button class="submit-btn" id="submitSuccess">🏆 랭킹 등록</button>
+                <div class="retry-msg" id="retryMsgSuccess">❌ 등록 실패했습니다. 다시 시도해주세요.<br><small style="color:#666">점수 <b id="retryScoreSuccess"></b>점 | 레벨 <b id="retryLevelSuccess"></b></small></div>
             </div>
         </div>
 
@@ -338,6 +346,7 @@
             <div class="name-input-container">
                 <input type="text" id="nameInputFieldOver" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
                 <button class="submit-btn" id="submitOver">🏆 랭킹 등록</button>
+                <div class="retry-msg" id="retryMsgOver">❌ 등록 실패했습니다. 다시 시도해주세요.<br><small style="color:#666">점수 <b id="retryScoreOver"></b>점 | 레벨 <b id="retryLevelOver"></b></small></div>
             </div>
         </div>
 
@@ -349,6 +358,7 @@
             <div class="name-input-container">
                 <input type="text" id="nameInputFieldTimeout" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
                 <button class="submit-btn" id="submitTimeout">🏆 랭킹 등록</button>
+                <div class="retry-msg" id="retryMsgTimeout">❌ 등록 실패했습니다. 다시 시도해주세요.<br><small style="color:#666">점수 <b id="retryScoreTimeout"></b>점 | 레벨 <b id="retryLevelTimeout"></b></small></div>
             </div>
         </div>
 
@@ -360,6 +370,7 @@
             <div class="name-input-container">
                 <input type="text" id="nameInputFieldEnd" class="name-input" placeholder="닉네임을 입력하세요 (최대 10자)" maxlength="10">
                 <button class="submit-btn" id="submitEnd">🏆 랭킹 등록</button>
+                <div class="retry-msg" id="retryMsgEnd">❌ 등록 실패했습니다. 다시 시도해주세요.<br><small style="color:#666">점수 <b id="retryScoreEnd"></b>점 | 레벨 <b id="retryLevelEnd"></b></small></div>
             </div>
         </div>
 
@@ -660,24 +671,37 @@
         async function submitRanking(type) {
             const fieldMap = { success:'nameInputFieldSuccess', over:'nameInputFieldOver', timeout:'nameInputFieldTimeout', end:'nameInputFieldEnd' };
             const btnMap   = { success:'submitSuccess', over:'submitOver', timeout:'submitTimeout', end:'submitEnd' };
-            const field = document.getElementById(fieldMap[type]);
-            const btn   = document.getElementById(btnMap[type]);
-            const name  = field.value.trim();
+            const retryMap = { success:'retryMsgSuccess', over:'retryMsgOver', timeout:'retryMsgTimeout', end:'retryMsgEnd' };
+            const retryScoreMap = { success:'retryScoreSuccess', over:'retryScoreOver', timeout:'retryScoreTimeout', end:'retryScoreEnd' };
+            const retryLevelMap = { success:'retryLevelSuccess', over:'retryLevelOver', timeout:'retryLevelTimeout', end:'retryLevelEnd' };
+
+            const field    = document.getElementById(fieldMap[type]);
+            const btn      = document.getElementById(btnMap[type]);
+            const retryMsg = document.getElementById(retryMap[type]);
+            const name     = field.value.trim();
             if (!name) { alert('닉네임을 입력해주세요!'); return; }
+
+            retryMsg.classList.remove('show');
             btn.disabled=true; btn.textContent='등록 중...';
             try {
                 const usedTime = TIME_LIMIT - remainingTime;
+                const lv = success ? 15 : getMaxLevel();
                 const record = {
                     name, score, time: usedTime,
-                    level: success ? 15 : getMaxLevel(),
+                    level: lv,
                     timestamp: Date.now(), date: new Date().toISOString()
                 };
                 const ref = await window.db.collection('rankings').add(record);
                 lastSubmittedId = ref.id;
                 field.value='';
+                retryMsg.classList.remove('show');
                 showRanking();
             } catch(e) {
-                alert('랭킹 등록 실패: ' + e.message);
+                // 실패 시 현재 점수/레벨 표시하고 재시도 유도
+                const lv = success ? 15 : getMaxLevel();
+                document.getElementById(retryScoreMap[type]).textContent = score;
+                document.getElementById(retryLevelMap[type]).textContent = 'Lv.' + lv;
+                retryMsg.classList.add('show');
             } finally {
                 btn.disabled=false; btn.textContent='🏆 랭킹 등록';
             }
