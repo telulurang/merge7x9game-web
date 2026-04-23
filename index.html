@@ -439,7 +439,8 @@ const BGM = (function(){
     };
 })();
 
-document.body.addEventListener('click',()=>BGM.start(),{once:true});
+// 어떤 클릭이든 BGM 시작 (이미 시작됐으면 무시)
+document.body.addEventListener('click', () => BGM.start());
 
 // ───────────────────────────────────────────────────
 // 🎮 게임 로직
