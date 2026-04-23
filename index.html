@@ -324,7 +324,7 @@ function init(){
     score=0; selected=null; over=false; success=false; ended=false; timedOut=false;
     hints=[]; current=random(); remainingTime=TIME_LIMIT;
     feverGauge=0; feverActive=false; feverRemain=0;
-    specialItems=[]; mergeCount=0; specialSelected=null;
+    specialItems=[]; mergeCount=0; specialSelected=null; mergeHighlights=[];
     specialThreshold = 3 + Math.floor(Math.random()*3);
     if(feverInterval) clearInterval(feverInterval);
     stopFeverVisuals();
@@ -409,7 +409,7 @@ function applyThemeMerge(theme){
         }
     }
     let merged=false;
-    const newItems=[]; // {r,c,level} - 새로 생긴 아이템 위치 기록
+    const newItems=[];
 
     for(const [lvStr, cells] of Object.entries(byLevel)){
         const lv=parseInt(lvStr);
@@ -417,24 +417,24 @@ function applyThemeMerge(theme){
         merged=true;
         const nl=lv+1;
         const pairCount=Math.floor(cells.length/2);
-        const usedCells=cells.slice(0, pairCount*2); // 짝수만 사용
-        const leftover=cells.slice(pairCount*2);      // 홀수 나머지는 그대로 유지
+        const usedCells=cells.slice(0, pairCount*2);
 
-        // 사용할 칸 비우기 (나머지는 건드리지 않음)
+        // 1. 모두 비우기
         usedCells.forEach(({r,c})=>{ grid[r][c]=null; });
 
-        // 결과 아이템을 비워진 칸 앞쪽에 배치
+        // 2. 앞쪽 pairCount개 칸에 결과 배치
         for(let i=0;i<pairCount;i++){
             const {r,c}=usedCells[i];
             grid[r][c]={theme, level:nl};
-            newItems.push({r,c,level:nl});
+            newItems.push({r,c});
             score+=calcScore(nl);
-            if(nl===14){ success=true; clearInterval(timeInterval); render(); return; }
+            if(nl===14){ success=true; clearInterval(timeInterval);
+                mergeHighlights=newItems; render(); return; }
         }
     }
+
     if(!merged){ showToast('합칠 수 있는 아이템이 없어요!'); render(); return; }
 
-    // 새 아이템 강조 표시 후 렌더
     mergeHighlights=newItems;
     render();
     setTimeout(()=>{ mergeHighlights=[]; render(); }, 1500);
@@ -763,7 +763,8 @@ async function submitRanking(type){
     if(!name){alert('닉네임을 입력해주세요!');return;}
     retry.classList.remove('show'); btn.disabled=true; btn.textContent='등록 중...';
     try{
-        const usedTime=TIME_LIMIT-remainingTime, lv=success?15:getMaxLevel();
+        const usedTime = timedOut ? TIME_LIMIT : (TIME_LIMIT - remainingTime);
+        const lv=success?15:getMaxLevel();
         const ref=await window.db.collection('rankings').add({name,score,time:usedTime,level:lv,timestamp:Date.now(),date:new Date().toISOString()});
         lastSubmittedId=ref.id; field.value=''; retry.classList.remove('show'); showRanking();
     }catch(e){ retry.classList.add('show'); }
@@ -781,19 +782,17 @@ async function showRanking(){
         const top10=rankings.slice(0,10);
         if(!top10.length){content.innerHTML='<p style="text-align:center;padding:20px;color:#666;">아직 등록된 랭킹이 없습니다.</p>';return;}
         const medals=['🥇','🥈','🥉'];
-        let html='<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>점수</th><th>시간</th></tr></thead><tbody>';
+        const fmtTime=sec=>{const m=Math.floor(sec/60),s=sec%60;return`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;};
+        let html='<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>점수</th><th>플레이시간</th></tr></thead><tbody>';
         top10.forEach((rec,i)=>{
-            const m=Math.floor(rec.time/60),s=rec.time%60;
-            const t=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
             const mine=lastSubmittedId&&rec.id===lastSubmittedId;
-            html+=`<tr class="${mine?'my-record':''}"><td class="rank-medal">${medals[i]??i+1}</td><td>${rec.name}</td><td>Lv.${rec.level}</td><td>${rec.score}</td><td>${t}</td></tr>`;
+            html+=`<tr class="${mine?'my-record':''}"><td class="rank-medal">${medals[i]??i+1}</td><td>${rec.name}</td><td>Lv.${rec.level}</td><td>${rec.score}</td><td>${fmtTime(rec.time)}</td></tr>`;
         });
         html+='</tbody></table>';
         if(myIndex>=10){
             const rec=rankings[myIndex];
-            const m=Math.floor(rec.time/60),s=rec.time%60;
             html+=`<div style="margin-top:10px;padding:10px;background:#fef3c7;border-radius:8px;text-align:center;font-size:12px;">
-                <b>📍 내 순위: ${myIndex+1}위</b><br>${rec.name} | Lv.${rec.level} | ${rec.score}점</div>`;
+                <b>📍 내 순위: ${myIndex+1}위</b><br>${rec.name} | Lv.${rec.level} | ${rec.score}점 | ${fmtTime(rec.time)}</div>`;
         }
         content.innerHTML=html;
     }catch(e){
