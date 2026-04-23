@@ -303,6 +303,7 @@ const FEVER_MAX=12, FEVER_DURATION=10;
 
 let grid, current, score, selected, over, hints, hintTimer, success, ended, timedOut;
 let remainingTime, timeInterval, lastSubmittedId=null;
+let finalUsedTime=0; // 게임 종료 시점에 확정된 플레이 시간
 let feverGauge=0, feverActive=false, feverInterval=null, feverRemain=0;
 let specialItems=[], mergeCount=0, specialSelected=null;
 let lastClickTime=0, lastClickCell=null;
@@ -325,6 +326,7 @@ function init(){
     hints=[]; current=random(); remainingTime=TIME_LIMIT;
     feverGauge=0; feverActive=false; feverRemain=0;
     specialItems=[]; mergeCount=0; specialSelected=null; mergeHighlights=[];
+    finalUsedTime=0;
     specialThreshold = 3 + Math.floor(Math.random()*3);
     if(feverInterval) clearInterval(feverInterval);
     stopFeverVisuals();
@@ -508,7 +510,7 @@ function clickCell(r, c){
             score+=calcScore(nl);
             addFeverGauge();
             trySpawnSpecial(nl-1);
-            if(nl===14){success=true;clearInterval(timeInterval);render();return;}
+            if(nl===14){success=true; finalUsedTime=TIME_LIMIT-remainingTime; clearInterval(timeInterval);render();return;}
             selected=null; hints=[]; render(); checkOver(); startHint();
         } else if(!tgt){
             grid[r][c]=sel; grid[selected.r][selected.c]=null; selected=null; render(); startHint();
@@ -526,7 +528,7 @@ function clickCell(r, c){
             score+=calcScore(nl);
             addFeverGauge();
             trySpawnSpecial(nl-1);
-            if(nl===14){success=true;clearInterval(timeInterval);render();return;}
+            if(nl===14){success=true; finalUsedTime=TIME_LIMIT-remainingTime; clearInterval(timeInterval);render();return;}
             current=random(); hints=[]; render(); checkOver(); startHint();
         } else if(!tgt){
             grid[r][c]=current; current=random(); render(); checkOver(); startHint();
@@ -651,6 +653,7 @@ function startTimer(){
 
 function triggerTimeout(){
     timedOut=true;
+    finalUsedTime=TIME_LIMIT;
     if(hintTimer) clearTimeout(hintTimer);
     endFever(); render();
 }
@@ -680,7 +683,7 @@ function checkOver(){
         const k=`${current.theme}-${current.level}`;
         if(map.get(k)>=1) return;
     }
-    over=true; clearInterval(timeInterval); endFever(); render();
+    over=true; finalUsedTime=TIME_LIMIT-remainingTime; clearInterval(timeInterval); endFever(); render();
 }
 
 function startHint(){
@@ -763,8 +766,7 @@ async function submitRanking(type){
     if(!name){alert('닉네임을 입력해주세요!');return;}
     retry.classList.remove('show'); btn.disabled=true; btn.textContent='등록 중...';
     try{
-        const usedTime = timedOut ? TIME_LIMIT : (TIME_LIMIT - remainingTime);
-        const lv=success?15:getMaxLevel();
+        const usedTime=finalUsedTime, lv=success?15:getMaxLevel();
         const ref=await window.db.collection('rankings').add({name,score,time:usedTime,level:lv,timestamp:Date.now(),date:new Date().toISOString()});
         lastSubmittedId=ref.id; field.value=''; retry.classList.remove('show'); showRanking();
     }catch(e){ retry.classList.add('show'); }
