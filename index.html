@@ -123,7 +123,6 @@
         .confirm-btn{ padding:10px 18px; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; }
         .confirm-yes{ background:linear-gradient(to right,#dc2626,#ea580c); color:white; }
         .confirm-no{ background:#e5e7eb; color:#333; }
-
         #endingScreen{
             position:fixed; top:0;left:0;right:0;bottom:0;
             z-index:99999; display:none; flex-direction:column;
@@ -303,6 +302,148 @@ firebase.initializeApp({
 window.db = firebase.firestore();
 </script>
 <script>
+// ───────────────────────────────────────────────────
+// 🎵 BGM 시스템 (평소 ↔ 피버 크로스페이드)
+// ───────────────────────────────────────────────────
+const BGM = (function(){
+    let ctx=null, masterGain=null, normalGain=null, feverGain=null;
+    let playing=false, isFever=false, started=false;
+    let normalLoop=null, feverLoop=null;
+
+    const NF={C:261.63,D:293.66,E:329.63,F:349.23,G:392.00,A:440.00,B:493.88,'C#':277.18,'D#':311.13,'F#':369.99,'G#':415.30,'A#':466.16};
+    function fr(note,oct){return NF[note]*Math.pow(2,oct-4);}
+
+    const NORMAL_MELODY=[
+        ['E',5,0.18,0.00],['E',5,0.18,0.22],['E',5,0.18,0.44],['E',5,0.28,0.66],
+        ['D',5,0.18,1.05],['C',5,0.18,1.28],['B',4,0.40,1.50],
+        ['G',5,0.18,2.20],['G',5,0.18,2.42],['G',5,0.18,2.64],['A',5,0.28,2.86],
+        ['G',5,0.18,3.25],['E',5,0.18,3.48],['C',5,0.50,3.70],
+        ['C',5,0.18,4.50],['D',5,0.18,4.72],['E',5,0.18,4.94],['F',5,0.18,5.16],
+        ['G',5,0.38,5.38],
+        ['A',5,0.18,5.90],['G',5,0.18,6.12],['F',5,0.18,6.34],['E',5,0.28,6.56],
+        ['D',5,0.18,7.00],['C',5,0.18,7.22],['B',4,0.18,7.44],['A',4,0.18,7.66],
+        ['G',4,0.55,7.88],
+        ['C',5,0.20,8.60],['E',5,0.20,8.86],['G',5,0.20,9.12],['C',6,0.60,9.38],
+    ];
+    const NORMAL_BASS=[
+        ['C',3,0.12,0.00],['G',3,0.12,0.50],['C',3,0.12,1.00],['G',3,0.12,1.50],
+        ['G',3,0.12,2.20],['D',4,0.12,2.70],['C',3,0.12,3.20],['G',3,0.12,3.70],
+        ['C',3,0.12,4.50],['F',3,0.12,5.00],['G',3,0.12,5.50],['C',3,0.12,6.00],
+        ['G',3,0.12,6.50],['G',3,0.12,7.00],['C',3,0.12,7.50],['G',3,0.12,8.00],
+        ['C',3,0.18,8.60],['E',3,0.18,8.86],['G',3,0.18,9.12],['C',4,0.45,9.38],
+    ];
+    const NORMAL_LEN=10.20;
+
+    const FEVER_MELODY=[
+        ['C',5,0.10,0.00],['D',5,0.10,0.12],['E',5,0.10,0.24],['G',5,0.10,0.36],
+        ['A',5,0.10,0.48],['G',5,0.10,0.60],['E',5,0.10,0.72],['C',5,0.10,0.84],
+        ['G',5,0.14,1.00],['G',5,0.14,1.18],['A',5,0.14,1.36],['B',5,0.22,1.54],
+        ['A',5,0.10,1.90],['G',5,0.10,2.04],['F',5,0.10,2.18],['E',5,0.10,2.32],
+        ['D',5,0.10,2.46],['C',5,0.10,2.60],
+        ['E',5,0.10,2.80],['G',5,0.10,2.94],['B',5,0.10,3.08],['D',6,0.22,3.22],
+        ['C',6,0.08,3.55],['B',5,0.08,3.65],['C',6,0.08,3.75],['B',5,0.08,3.85],
+        ['A',5,0.22,3.95],
+        ['C',5,0.09,4.30],['E',5,0.09,4.42],['G',5,0.09,4.54],['C',6,0.09,4.66],
+        ['E',6,0.09,4.78],['C',6,0.09,4.90],['G',5,0.09,5.02],['E',5,0.09,5.14],
+        ['G',5,0.14,5.30],['A',5,0.14,5.48],['B',5,0.14,5.66],['C',6,0.35,5.84],
+        ['B',5,0.10,6.30],['A',5,0.10,6.44],['G',5,0.10,6.58],['F',5,0.10,6.72],
+        ['E',5,0.10,6.86],['D',5,0.10,7.00],
+        ['C',5,0.14,7.18],['E',5,0.14,7.36],['G',5,0.14,7.54],['C',6,0.50,7.72],
+    ];
+    const FEVER_BASS=[
+        ['C',3,0.08,0.00],['C',3,0.08,0.24],['G',3,0.08,0.48],['G',3,0.08,0.72],
+        ['C',3,0.08,1.00],['G',3,0.08,1.20],['C',3,0.08,1.40],['G',3,0.08,1.60],
+        ['F',3,0.08,1.90],['C',3,0.08,2.10],['G',3,0.08,2.40],['D',4,0.08,2.60],
+        ['C',3,0.08,2.80],['G',3,0.08,3.00],['C',3,0.08,3.20],['G',3,0.08,3.50],
+        ['C',3,0.08,3.80],['G',3,0.08,4.00],
+        ['C',3,0.08,4.30],['G',3,0.08,4.54],['C',4,0.08,4.78],['G',3,0.08,5.02],
+        ['C',3,0.08,5.30],['G',3,0.08,5.50],['A',3,0.08,5.70],['F',3,0.08,5.90],
+        ['C',3,0.08,6.30],['G',3,0.08,6.58],['C',3,0.08,6.86],['G',3,0.08,7.18],
+        ['C',3,0.12,7.54],['G',3,0.12,7.72],
+    ];
+    const FEVER_LEN=8.40;
+
+    function playNote(note,oct,dur,when,vol,g){
+        const osc=ctx.createOscillator(), gn=ctx.createGain();
+        osc.type='triangle';
+        osc.frequency.setValueAtTime(fr(note,oct),when);
+        gn.gain.setValueAtTime(0,when);
+        gn.gain.linearRampToValueAtTime(vol,when+0.012);
+        gn.gain.exponentialRampToValueAtTime(vol*0.25,when+dur*0.55);
+        gn.gain.exponentialRampToValueAtTime(0.0001,when+dur);
+        osc.connect(gn); gn.connect(g);
+        osc.start(when); osc.stop(when+dur+0.05);
+    }
+
+    function scheduleNormal(){
+        if(!playing||isFever)return;
+        const now=ctx.currentTime;
+        NORMAL_MELODY.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.22,normalGain));
+        NORMAL_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.10,normalGain));
+        normalLoop=setTimeout(scheduleNormal,(NORMAL_LEN-0.05)*1000);
+    }
+    function scheduleFever(){
+        if(!playing||!isFever)return;
+        const now=ctx.currentTime;
+        FEVER_MELODY.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.28,feverGain));
+        FEVER_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.13,feverGain));
+        feverLoop=setTimeout(scheduleFever,(FEVER_LEN-0.05)*1000);
+    }
+    function crossFade(from,to,dur){
+        const now=ctx.currentTime;
+        from.gain.setValueAtTime(from.gain.value,now);
+        from.gain.linearRampToValueAtTime(0,now+dur);
+        to.gain.setValueAtTime(0,now);
+        to.gain.linearRampToValueAtTime(0.7,now+dur);
+    }
+    function setup(){
+        ctx=new(window.AudioContext||window.webkitAudioContext)();
+        masterGain=ctx.createGain(); masterGain.gain.value=1; masterGain.connect(ctx.destination);
+        normalGain=ctx.createGain(); normalGain.gain.value=0.7; normalGain.connect(masterGain);
+        feverGain=ctx.createGain();  feverGain.gain.value=0;   feverGain.connect(masterGain);
+    }
+
+    return {
+        start(){
+            if(started)return;
+            started=true; setup();
+            if(ctx.state==='suspended')ctx.resume();
+            playing=true; isFever=false;
+            scheduleNormal();
+        },
+        restart(){
+            if(!started)return;
+            clearTimeout(normalLoop); clearTimeout(feverLoop);
+            playing=false; isFever=false;
+            const now=ctx.currentTime;
+            normalGain.gain.setValueAtTime(0.7,now);
+            feverGain.gain.setValueAtTime(0,now);
+            if(ctx.state==='suspended')ctx.resume();
+            playing=true;
+            scheduleNormal();
+        },
+        switchFever(){
+            if(!started)return;
+            isFever=true;
+            clearTimeout(normalLoop);
+            crossFade(normalGain,feverGain,0.5);
+            setTimeout(scheduleFever,100);
+        },
+        switchNormal(){
+            if(!started)return;
+            isFever=false;
+            clearTimeout(feverLoop);
+            crossFade(feverGain,normalGain,0.8);
+            setTimeout(scheduleNormal,100);
+        },
+    };
+})();
+
+document.body.addEventListener('click',()=>BGM.start(),{once:true});
+
+// ───────────────────────────────────────────────────
+// 🎮 게임 로직
+// ───────────────────────────────────────────────────
 const GW=7, GH=9, TIME_LIMIT=180, URGENT=30;
 const THEMES = {
     fruit:  ['🍇','🍓','🍒','🍊','🍋','🍌','🍎','🍉','🍑','🍍','🥝','🥥','🍈','🥭','🫐'],
@@ -331,7 +472,10 @@ let mergeHighlights=[];
 let finalUsedTime=0;
 let specialThreshold=3+Math.floor(Math.random()*3);
 
-function showEndingEffect(title, sub, callback){
+// ✅ 핵심: 게임 내내 실제 최고레벨을 추적하는 변수
+let peakLevel=1;
+
+function showEndingEffect(title,sub,callback){
     const screen=document.getElementById('endingScreen');
     document.getElementById('endingTitle').textContent=title;
     document.getElementById('endingSub').textContent=sub;
@@ -339,14 +483,12 @@ function showEndingEffect(title, sub, callback){
     const colors=['#f59e0b','#ef4444','#ec4899','#8b5cf6','#3b82f6','#10b981','#fbbf24','#f97316','#a78bfa'];
     const stars=['⭐','🌟','✨','💫','🎉','🎊','💥','🏆'];
     for(let i=0;i<200;i++){
-        const el=document.createElement('div');
-        el.className='confetti-piece';
+        const el=document.createElement('div');el.className='confetti-piece';
         el.style.cssText=`left:${Math.random()*100}%;top:-10px;background:${colors[Math.floor(Math.random()*colors.length)]};width:${6+Math.random()*10}px;height:${8+Math.random()*12}px;border-radius:${Math.random()>0.5?'50%':'2px'};animation-duration:${1.2+Math.random()*1.3}s;animation-delay:${Math.random()*0.8}s;`;
         screen.appendChild(el);
     }
     for(let i=0;i<30;i++){
-        const el=document.createElement('div');
-        el.className='star-piece';
+        const el=document.createElement('div');el.className='star-piece';
         el.textContent=stars[Math.floor(Math.random()*stars.length)];
         el.style.cssText=`left:${5+Math.random()*90}%;top:${5+Math.random()*90}%;animation-duration:${0.8+Math.random()*1}s;animation-delay:${Math.random()*1}s;`;
         screen.appendChild(el);
@@ -355,8 +497,8 @@ function showEndingEffect(title, sub, callback){
     setTimeout(()=>{
         screen.classList.remove('show');
         screen.querySelectorAll('.confetti-piece,.star-piece').forEach(e=>e.remove());
-        if(callback) callback();
-    }, 2500);
+        if(callback)callback();
+    },2500);
 }
 
 function triggerEnd(type){
@@ -398,6 +540,7 @@ function init(){
     feverGauge=0;feverActive=false;feverRemain=0;
     specialItems=[];mergeCount=0;specialSelected=null;mergeHighlights=[];finalUsedTime=0;
     specialThreshold=3+Math.floor(Math.random()*3);
+    peakLevel=1; // ✅ 새게임 시 초기화
     if(feverInterval)clearInterval(feverInterval);
     stopFeverVisuals();
     startTimer();render();startHint();
@@ -421,8 +564,12 @@ function activateFever(){
         document.getElementById('feverCountdown').textContent=feverRemain;
         if(feverRemain<=0){clearInterval(feverInterval);endFever();}
     },1000);
+    BGM.switchFever();
 }
-function endFever(){feverActive=false;stopFeverVisuals();updateBars();}
+function endFever(){
+    feverActive=false;stopFeverVisuals();updateBars();
+    BGM.switchNormal();
+}
 function stopFeverVisuals(){
     document.getElementById('fever2xBadge').classList.remove('show');
     document.getElementById('gridContainer').classList.remove('fever-active-border');
@@ -432,6 +579,11 @@ function calcScore(lv){return feverActive?lv*10*2:lv*10;}
 function updateBars(){
     document.getElementById('feverBarFill').style.width=(feverGauge/FEVER_MAX*100)+'%';
     document.getElementById('feverBarCount').textContent=feverActive?`🔥 ${feverRemain}초`:`${feverGauge}/${FEVER_MAX}`;
+}
+
+// ✅ 합치기가 발생할 때마다 peakLevel 갱신
+function updatePeakLevel(newLevel){
+    if(newLevel > peakLevel) peakLevel = newLevel;
 }
 
 function trySpawnSpecial(mergedLevel){
@@ -474,6 +626,7 @@ function applyThemeMerge(theme){
             grid[r][c]={theme,level:nl};
             newItems.push({r,c});
             score+=calcScore(nl);
+            updatePeakLevel(nl+1); // ✅ level은 0-index → +1로 표시값 갱신
             if(nl===14){triggerEnd('success');return;}
         }
     }
@@ -528,7 +681,9 @@ function clickCell(r,c){
             const nl=sel.level+1;
             grid[r][c]={theme:sel.theme,level:nl};
             grid[selected.r][selected.c]=null;
-            score+=calcScore(nl);addFeverGauge();trySpawnSpecial(nl-1);
+            score+=calcScore(nl);
+            updatePeakLevel(nl+1); // ✅ level은 0-index → +1로 표시값 갱신
+            addFeverGauge();trySpawnSpecial(nl-1);
             if(nl===14){triggerEnd('success');return;}
             selected=null;hints=[];render();checkOver();startHint();
         } else if(!tgt){
@@ -543,7 +698,9 @@ function clickCell(r,c){
         if(tgt&&tgt.theme===current.theme&&tgt.level===current.level&&current.level<14){
             const nl=current.level+1;
             grid[r][c]={theme:current.theme,level:nl};
-            score+=calcScore(nl);addFeverGauge();trySpawnSpecial(nl-1);
+            score+=calcScore(nl);
+            updatePeakLevel(nl+1); // ✅ level은 0-index → +1로 표시값 갱신
+            addFeverGauge();trySpawnSpecial(nl-1);
             if(nl===14){triggerEnd('success');return;}
             current=random();hints=[];render();checkOver();startHint();
         } else if(!tgt){
@@ -600,16 +757,16 @@ function render(){
         document.getElementById('successTime').textContent=getTimeStr();
     } else if(timedOut){
         document.getElementById('gameTimeoutBox').style.display='block';
-        document.getElementById('timeoutLevel').textContent=getMaxLevel();
+        document.getElementById('timeoutLevel').textContent=peakLevel; // ✅
         document.getElementById('timeoutScore').textContent=score;
     } else if(ended){
         document.getElementById('gameEndBox').style.display='block';
-        document.getElementById('endLevel').textContent=getMaxLevel();
+        document.getElementById('endLevel').textContent=peakLevel; // ✅
         document.getElementById('endScore').textContent=score;
     } else if(over){
         document.getElementById('gameOverBox').style.display='block';
         document.getElementById('finalScore').textContent=score;
-        document.getElementById('finalLevel').textContent=getMaxLevel();
+        document.getElementById('finalLevel').textContent=peakLevel; // ✅
     }
     const g=document.getElementById('grid');g.innerHTML='';
     if(ended||over||success||timedOut)return;
@@ -690,48 +847,13 @@ function resetGame(){
     if(hintTimer)clearTimeout(hintTimer);
     if(timeInterval)clearInterval(timeInterval);
     if(feverInterval)clearInterval(feverInterval);
-    lastSubmittedId=null;init();
+    lastSubmittedId=null;
+    BGM.restart();
+    init();
 }
-function getMaxLevel(){
-    let m=0;
-    for(let r=0;r<GH;r++) for(let c=0;c<GW;c++) if(grid[r][c]&&grid[r][c].level>m) m=grid[r][c].level;
-    return m+1;
-}
-function showHelp(){
-    const c=document.getElementById('helpContent');
-    c.innerHTML=`
-    <div class="theme-section">
-        <div class="theme-title">🔥 피버 시스템</div>
-        <div style="font-size:12px;color:#555;line-height:1.8;">
-            • 합치기 성공 시마다 피버 게이지 +1<br>
-            • 게이지 12칸 채우면 <b>자동으로 피버 발동</b><br>
-            • 피버 중 <b>10초간 점수 2배!</b>
-        </div>
-    </div>
-    <div class="theme-section">
-        <div class="theme-title">✨ 특수 아이템 (4레벨↑ 합칠 때 3~5회 중 랜덤 등장)</div>
-        <div style="font-size:12px;color:#555;line-height:2;">
-            <b>⏰ 타임+10</b> : 더블클릭 → 시간 +10초<br>
-            <b>🌀 테마합치기</b> : 클릭 → 테마 선택 → 해당 테마 전부 자동 합치기<br>
-            <span style="color:#9333ea;">※ 재클릭하면 선택 취소</span>
-        </div>
-    </div>`;
-    for(const[tk,emojis] of Object.entries(THEMES)){
-        const sec=document.createElement('div');sec.className='theme-section';
-        const tit=document.createElement('div');tit.className='theme-title';tit.textContent=NAMES[tk];
-        sec.appendChild(tit);
-        const chain=document.createElement('div');chain.className='evolution-chain';
-        for(let i=0;i<15;i++){
-            const it=document.createElement('div');it.className='evo-item';
-            const em=document.createElement('div');em.className='evo-emoji';em.textContent=emojis[i];
-            const lv=document.createElement('div');lv.className='evo-level';lv.textContent=`Lv.${i+1}`;
-            it.appendChild(em);it.appendChild(lv);chain.appendChild(it);
-            if(i<14){const ar=document.createElement('div');ar.className='arrow';ar.textContent='→';chain.appendChild(ar);}
-        }
-        sec.appendChild(chain);c.appendChild(sec);
-    }
-    document.getElementById('helpPopup').classList.add('show');
-}
+
+// ✅ getMaxLevel() 완전 제거 → peakLevel로 통일
+// submitRanking에서도 peakLevel 사용
 async function submitRanking(type){
     const fm={success:'nameInputFieldSuccess',over:'nameInputFieldOver',timeout:'nameInputFieldTimeout',end:'nameInputFieldEnd'};
     const bm={success:'submitSuccess',over:'submitOver',timeout:'submitTimeout',end:'submitEnd'};
@@ -741,18 +863,21 @@ async function submitRanking(type){
     if(!name){alert('닉네임을 입력해주세요!');return;}
     retry.classList.remove('show');btn.disabled=true;btn.textContent='등록 중...';
     try{
-        const lv=success?15:getMaxLevel();
-        const ref=await window.db.collection('rankings').add({name,score,time:finalUsedTime,level:lv,timestamp:Date.now(),date:new Date().toISOString()});
+        const lv = success ? 15 : peakLevel; // ✅ peakLevel로 저장
+        const ref=await window.db.collection('rankings').add({
+            name, score, time:finalUsedTime, level:lv,
+            timestamp:Date.now(), date:new Date().toISOString()
+        });
         lastSubmittedId=ref.id;field.value='';retry.classList.remove('show');showRanking();
     }catch(e){retry.classList.add('show');}
     finally{btn.disabled=false;btn.textContent='🏆 랭킹 등록';}
 }
+
 async function showRanking(){
     const content=document.getElementById('rankingContent');
     content.innerHTML='<div class="loading">불러오는 중...</div>';
     document.getElementById('rankingPopup').classList.add('show');
     try{
-        // ✅ 수정: 점수 내림차순 → 레벨 내림차순 → 이름 오름차순
         const snap=await window.db.collection('rankings')
             .orderBy('score','desc')
             .orderBy('level','desc')
@@ -763,7 +888,6 @@ async function showRanking(){
         const top10=rankings.slice(0,10);
         if(!top10.length){content.innerHTML='<p style="text-align:center;padding:20px;color:#666;">아직 등록된 랭킹이 없습니다.</p>';return;}
         const medals=['🥇','🥈','🥉'];
-        // ✅ 수정: 플레이시간 컬럼 제거
         let html='<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>점수</th></tr></thead><tbody>';
         top10.forEach((rec,i)=>{
             const mine=lastSubmittedId&&rec.id===lastSubmittedId;
@@ -803,6 +927,42 @@ document.getElementById('confirmYes').addEventListener('click',()=>{
     finalUsedTime=TIME_LIMIT-remainingTime;
     showEndingEffect('⏹️ 게임 종료',`점수 ${score}점`,()=>{ended=true;render();});
 });
+
+function showHelp(){
+    const c=document.getElementById('helpContent');
+    c.innerHTML=`
+    <div class="theme-section">
+        <div class="theme-title">🔥 피버 시스템</div>
+        <div style="font-size:12px;color:#555;line-height:1.8;">
+            • 합치기 성공 시마다 피버 게이지 +1<br>
+            • 게이지 12칸 채우면 <b>자동으로 피버 발동</b><br>
+            • 피버 중 <b>10초간 점수 2배!</b>
+        </div>
+    </div>
+    <div class="theme-section">
+        <div class="theme-title">✨ 특수 아이템 (4레벨↑ 합칠 때 3~5회 중 랜덤 등장)</div>
+        <div style="font-size:12px;color:#555;line-height:2;">
+            <b>⏰ 타임+10</b> : 더블클릭 → 시간 +10초<br>
+            <b>🌀 테마합치기</b> : 클릭 → 테마 선택 → 해당 테마 전부 자동 합치기<br>
+            <span style="color:#9333ea;">※ 재클릭하면 선택 취소</span>
+        </div>
+    </div>`;
+    for(const[tk,emojis] of Object.entries(THEMES)){
+        const sec=document.createElement('div');sec.className='theme-section';
+        const tit=document.createElement('div');tit.className='theme-title';tit.textContent=NAMES[tk];
+        sec.appendChild(tit);
+        const chain=document.createElement('div');chain.className='evolution-chain';
+        for(let i=0;i<15;i++){
+            const it=document.createElement('div');it.className='evo-item';
+            const em=document.createElement('div');em.className='evo-emoji';em.textContent=emojis[i];
+            const lv=document.createElement('div');lv.className='evo-level';lv.textContent=`Lv.${i+1}`;
+            it.appendChild(em);it.appendChild(lv);chain.appendChild(it);
+            if(i<14){const ar=document.createElement('div');ar.className='arrow';ar.textContent='→';chain.appendChild(ar);}
+        }
+        sec.appendChild(chain);c.appendChild(sec);
+    }
+    document.getElementById('helpPopup').classList.add('show');
+}
 
 function setVH(){document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px');}
 window.addEventListener('resize',()=>{setVH();fitGrid();});
