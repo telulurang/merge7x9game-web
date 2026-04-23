@@ -124,23 +124,16 @@
         .confirm-yes{ background:linear-gradient(to right,#dc2626,#ea580c); color:white; }
         .confirm-no{ background:#e5e7eb; color:#333; }
 
-        /* 엔딩 이펙트 */
         #endingScreen{
             position:fixed; top:0;left:0;right:0;bottom:0;
-            z-index:99999;
-            display:none;
-            flex-direction:column;
-            align-items:center;
-            justify-content:center;
-            pointer-events:none;
-            overflow:hidden;
+            z-index:99999; display:none; flex-direction:column;
+            align-items:center; justify-content:center;
+            pointer-events:none; overflow:hidden;
         }
         #endingScreen.show{ display:flex; }
         .ending-title-box{
             background:linear-gradient(135deg,#f59e0b,#ef4444,#ec4899,#8b5cf6);
-            border-radius:24px;
-            padding:24px 48px;
-            text-align:center;
+            border-radius:24px; padding:24px 48px; text-align:center;
             box-shadow:0 8px 40px rgba(236,72,153,0.7);
             animation:endingPop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
             transform:scale(0);
@@ -149,9 +142,7 @@
         .ending-title{ font-size:38px; font-weight:900; color:white; text-shadow:0 2px 12px rgba(0,0,0,0.3); }
         .ending-sub{ font-size:18px; font-weight:bold; color:rgba(255,255,255,0.9); margin-top:8px; }
         .confetti-piece{
-            position:absolute;
-            width:10px; height:12px;
-            border-radius:2px;
+            position:absolute; width:10px; height:12px; border-radius:2px;
             animation:confettiFall linear forwards, confettiGlow 0.3s infinite alternate;
         }
         @keyframes confettiFall{
@@ -160,13 +151,9 @@
         }
         @keyframes confettiGlow{
             from{ box-shadow:0 0 4px 2px rgba(255,255,255,0.6); border:2px solid rgba(255,255,255,0.6); }
-            to{   box-shadow:0 0 12px 6px rgba(255,255,255,1);   border:2px solid rgba(255,255,255,1); }
+            to{   box-shadow:0 0 12px 6px rgba(255,255,255,1); border:2px solid rgba(255,255,255,1); }
         }
-        .star-piece{
-            position:absolute;
-            font-size:24px;
-            animation:starPop ease-out forwards;
-        }
+        .star-piece{ position:absolute; font-size:24px; animation:starPop ease-out forwards; }
         @keyframes starPop{
             0%  { opacity:0; transform:scale(0) rotate(0deg); }
             40% { opacity:1; transform:scale(1.3) rotate(180deg); }
@@ -178,7 +165,6 @@
 
 <div class="fever-2x-badge" id="fever2xBadge">🔥 점수 2배! <span id="feverCountdown">10</span>초</div>
 
-<!-- 엔딩 이펙트 전용 레이어 -->
 <div id="endingScreen">
     <div class="ending-title-box">
         <div class="ending-title" id="endingTitle"></div>
@@ -323,7 +309,6 @@ const THEMES = {
     animal: ['🐭','🐹','🐰','🦊','🐱','🐶','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵'],
     seafood:['🦐','🦞','🦀','🦑','🐙','🐟','🐠','🐡','🦈','🐬','🐳','🐋','🦭','🐢','🦦'],
     heart:  ['❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💔','❣️','💕','💞','💓','💗'],
-
     sports: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🥎','🏓','🏸','🏑','🏒','🥊','🥋','⛳'],
     food:   ['🍕','🍔','🍗','🌭','🍟','🍰','🍪','🍩','🥐','🥖','🧀','🥓','🥚','🍱','🍜'],
     vehicle:['🚲','🛴','🏍️','🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚']
@@ -346,48 +331,26 @@ let mergeHighlights=[];
 let finalUsedTime=0;
 let specialThreshold=3+Math.floor(Math.random()*3);
 
-// ── 엔딩 이펙트 ──────────────────────────────────
 function showEndingEffect(title, sub, callback){
     const screen=document.getElementById('endingScreen');
     document.getElementById('endingTitle').textContent=title;
     document.getElementById('endingSub').textContent=sub;
-
-    // 기존 파티클 제거
     screen.querySelectorAll('.confetti-piece,.star-piece').forEach(e=>e.remove());
-
     const colors=['#f59e0b','#ef4444','#ec4899','#8b5cf6','#3b82f6','#10b981','#fbbf24','#f97316','#a78bfa'];
     const stars=['⭐','🌟','✨','💫','🎉','🎊','💥','🏆'];
-
-    // 컨페티
     for(let i=0;i<200;i++){
         const el=document.createElement('div');
         el.className='confetti-piece';
-        el.style.cssText=`
-            left:${Math.random()*100}%;
-            top:-10px;
-            background:${colors[Math.floor(Math.random()*colors.length)]};
-            width:${6+Math.random()*10}px;
-            height:${8+Math.random()*12}px;
-            border-radius:${Math.random()>0.5?'50%':'2px'};
-            animation-duration:${1.2+Math.random()*1.3}s;
-            animation-delay:${Math.random()*0.8}s;
-        `;
+        el.style.cssText=`left:${Math.random()*100}%;top:-10px;background:${colors[Math.floor(Math.random()*colors.length)]};width:${6+Math.random()*10}px;height:${8+Math.random()*12}px;border-radius:${Math.random()>0.5?'50%':'2px'};animation-duration:${1.2+Math.random()*1.3}s;animation-delay:${Math.random()*0.8}s;`;
         screen.appendChild(el);
     }
-    // 별
     for(let i=0;i<30;i++){
         const el=document.createElement('div');
         el.className='star-piece';
         el.textContent=stars[Math.floor(Math.random()*stars.length)];
-        el.style.cssText=`
-            left:${5+Math.random()*90}%;
-            top:${5+Math.random()*90}%;
-            animation-duration:${0.8+Math.random()*1}s;
-            animation-delay:${Math.random()*1}s;
-        `;
+        el.style.cssText=`left:${5+Math.random()*90}%;top:${5+Math.random()*90}%;animation-duration:${0.8+Math.random()*1}s;animation-delay:${Math.random()*1}s;`;
         screen.appendChild(el);
     }
-
     screen.classList.add('show');
     setTimeout(()=>{
         screen.classList.remove('show');
@@ -474,9 +437,7 @@ function updateBars(){
 function trySpawnSpecial(mergedLevel){
     if(mergedLevel<3)return;
     mergeCount++;
-    if(mergeCount>=specialThreshold){
-        mergeCount=0;specialThreshold=3+Math.floor(Math.random()*3);spawnSpecial();
-    }
+    if(mergeCount>=specialThreshold){mergeCount=0;specialThreshold=3+Math.floor(Math.random()*3);spawnSpecial();}
 }
 function spawnSpecial(){
     const empties=[];
@@ -791,22 +752,27 @@ async function showRanking(){
     content.innerHTML='<div class="loading">불러오는 중...</div>';
     document.getElementById('rankingPopup').classList.add('show');
     try{
-        const snap=await window.db.collection('rankings').orderBy('level','desc').orderBy('time','asc').orderBy('score','desc').limit(50).get();
+        // ✅ 수정: 점수 내림차순 → 레벨 내림차순 → 이름 오름차순
+        const snap=await window.db.collection('rankings')
+            .orderBy('score','desc')
+            .orderBy('level','desc')
+            .orderBy('name','asc')
+            .limit(50).get();
         const rankings=snap.docs.map(d=>({id:d.id,...d.data()}));
         const myIndex=lastSubmittedId?rankings.findIndex(r=>r.id===lastSubmittedId):-1;
         const top10=rankings.slice(0,10);
         if(!top10.length){content.innerHTML='<p style="text-align:center;padding:20px;color:#666;">아직 등록된 랭킹이 없습니다.</p>';return;}
         const medals=['🥇','🥈','🥉'];
-        const fmt=sec=>{const m=Math.floor(sec/60),s=sec%60;return`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;};
-        let html='<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>점수</th><th>플레이시간</th></tr></thead><tbody>';
+        // ✅ 수정: 플레이시간 컬럼 제거
+        let html='<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>점수</th></tr></thead><tbody>';
         top10.forEach((rec,i)=>{
             const mine=lastSubmittedId&&rec.id===lastSubmittedId;
-            html+=`<tr class="${mine?'my-record':''}"><td class="rank-medal">${medals[i]??i+1}</td><td>${rec.name}</td><td>Lv.${rec.level}</td><td>${rec.score}</td><td>${fmt(rec.time)}</td></tr>`;
+            html+=`<tr class="${mine?'my-record':''}"><td class="rank-medal">${medals[i]??i+1}</td><td>${rec.name}</td><td>Lv.${rec.level}</td><td>${rec.score}</td></tr>`;
         });
         html+='</tbody></table>';
         if(myIndex>=10){
             const rec=rankings[myIndex];
-            html+=`<div style="margin-top:10px;padding:10px;background:#fef3c7;border-radius:8px;text-align:center;font-size:12px;"><b>📍 내 순위: ${myIndex+1}위</b><br>${rec.name} | Lv.${rec.level} | ${rec.score}점 | ${fmt(rec.time)}</div>`;
+            html+=`<div style="margin-top:10px;padding:10px;background:#fef3c7;border-radius:8px;text-align:center;font-size:12px;"><b>📍 내 순위: ${myIndex+1}위</b><br>${rec.name} | Lv.${rec.level} | ${rec.score}점</div>`;
         }
         content.innerHTML=html;
     }catch(e){
