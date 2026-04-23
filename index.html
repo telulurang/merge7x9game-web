@@ -402,36 +402,40 @@ function getSpecialAt(r,c){ return specialItems.find(s=>s.r===r&&s.c===c)||null;
 function removeSpecialAt(r,c){ specialItems=specialItems.filter(s=>!(s.r===r&&s.c===c)); }
 
 function applyThemeMerge(theme){
+    // 1. 해당 테마 아이템 전체 수집 (레벨별)
     const byLevel={};
     for(let r=0;r<GH;r++) for(let c=0;c<GW;c++){
         const item=grid[r][c];
         if(item && item.theme===theme && !getSpecialAt(r,c)){
-            if(!byLevel[item.level]) byLevel[item.level]=[];
-            byLevel[item.level].push({r,c});
+            const lv=item.level;
+            if(!byLevel[lv]) byLevel[lv]=[];
+            byLevel[lv].push({r,c});
         }
     }
+
+    const levels=Object.keys(byLevel).map(Number).sort((a,b)=>a-b);
     let merged=false;
     const newItems=[];
 
-    for(const [lvStr, cells] of Object.entries(byLevel)){
-        const lv=parseInt(lvStr);
-        if(cells.length<2||lv>=14) continue;
+    for(const lv of levels){
+        const cells=byLevel[lv];
+        if(!cells||cells.length<2||lv>=14) continue;
         merged=true;
         const nl=lv+1;
         const pairCount=Math.floor(cells.length/2);
-        const usedCells=cells.slice(0, pairCount*2);
 
-        // 1. 모두 비우기
-        usedCells.forEach(({r,c})=>{ grid[r][c]=null; });
-
-        // 2. 앞쪽 pairCount개 칸에 결과 배치
+        // 짝수 개만 비우고 결과 배치, 홀수 나머지는 건드리지 않음
+        for(let i=0;i<pairCount*2;i++) grid[cells[i].r][cells[i].c]=null;
         for(let i=0;i<pairCount;i++){
-            const {r,c}=usedCells[i];
+            const {r,c}=cells[i];
             grid[r][c]={theme, level:nl};
             newItems.push({r,c});
             score+=calcScore(nl);
-            if(nl===14){ success=true; clearInterval(timeInterval);
-                mergeHighlights=newItems; render(); return; }
+            if(nl===14){
+                success=true; finalUsedTime=TIME_LIMIT-remainingTime;
+                clearInterval(timeInterval);
+                mergeHighlights=newItems; render(); return;
+            }
         }
     }
 
