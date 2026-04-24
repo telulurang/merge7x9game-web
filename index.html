@@ -403,27 +403,7 @@ const BGM = (function(){
         feverGain=ctx.createGain();  feverGain.gain.value=0;   feverGain.connect(masterGain);
     }
 
-    return {
-        start(){
-            if(started)return;
-            started=true; setup();
-            if(ctx.state==='suspended')ctx.resume();
-            playing=true; isFever=false;
-            scheduleNormal();
-        },
-        restart(){
-            if(!started)return;
-            clearTimeout(normalLoop); clearTimeout(feverLoop);
-            playing=false; isFever=false;
-            const now=ctx.currentTime;
-            normalGain.gain.setValueAtTime(0.7,now);
-            feverGain.gain.setValueAtTime(0,now);
-            if(ctx.state==='suspended')ctx.resume();
-            playing=true;
-            scheduleNormal();
-        },
-        switchFever(){
-            if(!started)return;
+started)return;
             isFever=true;
             clearTimeout(normalLoop);
             crossFade(normalGain,feverGain,0.5);
@@ -439,8 +419,7 @@ const BGM = (function(){
     };
 })();
 
-// 어떤 클릭이든 BGM 시작 (이미 시작됐으면 무시)
-document.body.addEventListener('click', () => BGM.start());
+document.body.addEventListener('click',()=>BGM.start(),{once:true});
 
 // ───────────────────────────────────────────────────
 // 🎮 게임 로직
@@ -507,19 +486,23 @@ function triggerEnd(type){
         timedOut=true; finalUsedTime=TIME_LIMIT;
         if(hintTimer)clearTimeout(hintTimer);
         endFever();
+        BGM.switchEnding();
         showEndingEffect('⏰ 시간 종료!',`점수 ${score}점`,()=>render());
     } else if(type==='over'){
         over=true; finalUsedTime=TIME_LIMIT-remainingTime;
         clearInterval(timeInterval); endFever();
+        BGM.switchEnding();
         showEndingEffect('💀 게임 오버',`점수 ${score}점`,()=>render());
     } else if(type==='success'){
         success=true; finalUsedTime=TIME_LIMIT-remainingTime;
         clearInterval(timeInterval);
+        BGM.switchEnding();
         showEndingEffect('🎉 Lv.15 달성!',`점수 ${score}점`,()=>render());
     } else if(type==='ended'){
         ended=true; finalUsedTime=TIME_LIMIT-remainingTime;
         clearInterval(timeInterval);
         if(feverInterval)clearInterval(feverInterval);
+        BGM.switchEnding();
         showEndingEffect('⏹️ 게임 종료',`점수 ${score}점`,()=>render());
     }
 }
