@@ -342,7 +342,7 @@ const BGM = (function(){
     };
 })();
 
-document.body.addEventListener('click',()=>BGM.start());
+document.body.addEventListener('click',()=>BGM.start(),{once:true});
 
 // ───────────── 게임 ─────────────
 const GW=7,GH=9,TIME_LIMIT=180,URGENT=30;
