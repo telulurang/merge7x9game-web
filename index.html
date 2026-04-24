@@ -163,7 +163,6 @@
 <body>
 
 <div class="fever-2x-badge" id="fever2xBadge">🔥 점수 2배! <span id="feverCountdown">10</span>초</div>
-
 <div id="endingScreen">
     <div class="ending-title-box">
         <div class="ending-title" id="endingTitle"></div>
@@ -302,9 +301,9 @@ firebase.initializeApp({
 window.db = firebase.firestore();
 </script>
 <script>
-// ───────────────────────────────────────────────────
-// 🎵 BGM 시스템 (평소 ↔ 피버 ↔ 엔딩 크로스페이드)
-// ───────────────────────────────────────────────────
+// ═══════════════════════════════
+// 🎵 BGM 시스템
+// ═══════════════════════════════
 const BGM = (function(){
     let ctx=null, masterGain=null, normalGain=null, feverGain=null, endingGain=null;
     let playing=false, isFever=false, isEnding=false, started=false;
@@ -313,6 +312,7 @@ const BGM = (function(){
     const NF={C:261.63,D:293.66,E:329.63,F:349.23,G:392.00,A:440.00,B:493.88,'C#':277.18,'D#':311.13,'F#':369.99,'G#':415.30,'A#':466.16};
     function fr(note,oct){return NF[note]*Math.pow(2,oct-4);}
 
+    // 평소 BGM
     const NORMAL_MELODY=[
         ['E',5,0.18,0.00],['E',5,0.18,0.22],['E',5,0.18,0.44],['E',5,0.28,0.66],
         ['D',5,0.18,1.05],['C',5,0.18,1.28],['B',4,0.40,1.50],
@@ -334,6 +334,7 @@ const BGM = (function(){
     ];
     const NORMAL_LEN=10.20;
 
+    // 피버 BGM
     const FEVER_MELODY=[
         ['C',5,0.10,0.00],['D',5,0.10,0.12],['E',5,0.10,0.24],['G',5,0.10,0.36],
         ['A',5,0.10,0.48],['G',5,0.10,0.60],['E',5,0.10,0.72],['C',5,0.10,0.84],
@@ -363,6 +364,7 @@ const BGM = (function(){
     ];
     const FEVER_LEN=8.40;
 
+    // 엔딩 BGM - 낮고 느린 톤
     const ENDING_MELODY=[
         ['G',4,0.55,0.00],['E',4,0.55,0.70],['C',4,0.55,1.40],
         ['D',4,0.55,2.20],['B',3,0.55,2.90],['G',3,0.80,3.60],
@@ -419,19 +421,28 @@ const BGM = (function(){
         ENDING_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.09,endingGain));
         endingLoop=setTimeout(scheduleEnding,(ENDING_LEN-0.05)*1000);
     }
+
     function crossFade(from,to,dur){
         const now=ctx.currentTime;
+        from.gain.cancelScheduledValues(now);
         from.gain.setValueAtTime(from.gain.value,now);
         from.gain.linearRampToValueAtTime(0,now+dur);
+        to.gain.cancelScheduledValues(now);
         to.gain.setValueAtTime(0,now);
         to.gain.linearRampToValueAtTime(0.7,now+dur);
     }
+
     function setup(){
         ctx=new(window.AudioContext||window.webkitAudioContext)();
         masterGain=ctx.createGain(); masterGain.gain.value=1; masterGain.connect(ctx.destination);
         normalGain=ctx.createGain(); normalGain.gain.value=0.7; normalGain.connect(masterGain);
         feverGain=ctx.createGain();  feverGain.gain.value=0;   feverGain.connect(masterGain);
         endingGain=ctx.createGain(); endingGain.gain.value=0;  endingGain.connect(masterGain);
+    }
+
+    function stopAll(){
+        clearTimeout(normalLoop); clearTimeout(feverLoop); clearTimeout(endingLoop);
+        normalLoop=null; feverLoop=null; endingLoop=null;
     }
 
     return {
@@ -443,16 +454,18 @@ const BGM = (function(){
             scheduleNormal();
         },
         restart(){
-            if(!started)return;
-            clearTimeout(normalLoop); clearTimeout(feverLoop); clearTimeout(endingLoop);
+            if(!started){ this.start(); return; }
+            stopAll();
             playing=false; isFever=false; isEnding=false;
+            if(ctx.state==='suspended')ctx.resume();
             const now=ctx.currentTime;
+            // 모든 gain 즉시 0으로 초기화
             normalGain.gain.cancelScheduledValues(now); normalGain.gain.setValueAtTime(0,now);
             feverGain.gain.cancelScheduledValues(now);  feverGain.gain.setValueAtTime(0,now);
             endingGain.gain.cancelScheduledValues(now); endingGain.gain.setValueAtTime(0,now);
-            if(ctx.state==='suspended')ctx.resume();
             playing=true;
-            normalGain.gain.linearRampToValueAtTime(0.7,now+0.3);
+            // 평소 BGM 짧게 페이드인
+            normalGain.gain.linearRampToValueAtTime(0.7, now+0.3);
             scheduleNormal();
         },
         switchFever(){
@@ -470,7 +483,7 @@ const BGM = (function(){
         switchEnding(){
             if(!started)return;
             isEnding=true; isFever=false;
-            clearTimeout(normalLoop); clearTimeout(feverLoop);
+            stopAll();
             const now=ctx.currentTime;
             normalGain.gain.cancelScheduledValues(now);
             normalGain.gain.setValueAtTime(normalGain.gain.value,now);
@@ -487,160 +500,10 @@ const BGM = (function(){
 })();
 
 document.body.addEventListener('click',()=>BGM.start(),{once:true});
-    let ctx=null, masterGain=null, normalGain=null, feverGain=null;
-    let playing=false, isFever=false, started=false;
-    let normalLoop=null, feverLoop=null;
 
-    const NF={C:261.63,D:293.66,E:329.63,F:349.23,G:392.00,A:440.00,B:493.88,'C#':277.18,'D#':311.13,'F#':369.99,'G#':415.30,'A#':466.16};
-    function fr(note,oct){return NF[note]*Math.pow(2,oct-4);}
-
-    const NORMAL_MELODY=[
-        ['E',5,0.18,0.00],['E',5,0.18,0.22],['E',5,0.18,0.44],['E',5,0.28,0.66],
-        ['D',5,0.18,1.05],['C',5,0.18,1.28],['B',4,0.40,1.50],
-        ['G',5,0.18,2.20],['G',5,0.18,2.42],['G',5,0.18,2.64],['A',5,0.28,2.86],
-        ['G',5,0.18,3.25],['E',5,0.18,3.48],['C',5,0.50,3.70],
-        ['C',5,0.18,4.50],['D',5,0.18,4.72],['E',5,0.18,4.94],['F',5,0.18,5.16],
-        ['G',5,0.38,5.38],
-        ['A',5,0.18,5.90],['G',5,0.18,6.12],['F',5,0.18,6.34],['E',5,0.28,6.56],
-        ['D',5,0.18,7.00],['C',5,0.18,7.22],['B',4,0.18,7.44],['A',4,0.18,7.66],
-        ['G',4,0.55,7.88],
-        ['C',5,0.20,8.60],['E',5,0.20,8.86],['G',5,0.20,9.12],['C',6,0.60,9.38],
-    ];
-    const NORMAL_BASS=[
-        ['C',3,0.12,0.00],['G',3,0.12,0.50],['C',3,0.12,1.00],['G',3,0.12,1.50],
-        ['G',3,0.12,2.20],['D',4,0.12,2.70],['C',3,0.12,3.20],['G',3,0.12,3.70],
-        ['C',3,0.12,4.50],['F',3,0.12,5.00],['G',3,0.12,5.50],['C',3,0.12,6.00],
-        ['G',3,0.12,6.50],['G',3,0.12,7.00],['C',3,0.12,7.50],['G',3,0.12,8.00],
-        ['C',3,0.18,8.60],['E',3,0.18,8.86],['G',3,0.18,9.12],['C',4,0.45,9.38],
-    ];
-    const NORMAL_LEN=10.20;
-
-    const FEVER_MELODY=[
-        ['C',5,0.10,0.00],['D',5,0.10,0.12],['E',5,0.10,0.24],['G',5,0.10,0.36],
-        ['A',5,0.10,0.48],['G',5,0.10,0.60],['E',5,0.10,0.72],['C',5,0.10,0.84],
-        ['G',5,0.14,1.00],['G',5,0.14,1.18],['A',5,0.14,1.36],['B',5,0.22,1.54],
-        ['A',5,0.10,1.90],['G',5,0.10,2.04],['F',5,0.10,2.18],['E',5,0.10,2.32],
-        ['D',5,0.10,2.46],['C',5,0.10,2.60],
-        ['E',5,0.10,2.80],['G',5,0.10,2.94],['B',5,0.10,3.08],['D',6,0.22,3.22],
-        ['C',6,0.08,3.55],['B',5,0.08,3.65],['C',6,0.08,3.75],['B',5,0.08,3.85],
-        ['A',5,0.22,3.95],
-        ['C',5,0.09,4.30],['E',5,0.09,4.42],['G',5,0.09,4.54],['C',6,0.09,4.66],
-        ['E',6,0.09,4.78],['C',6,0.09,4.90],['G',5,0.09,5.02],['E',5,0.09,5.14],
-        ['G',5,0.14,5.30],['A',5,0.14,5.48],['B',5,0.14,5.66],['C',6,0.35,5.84],
-        ['B',5,0.10,6.30],['A',5,0.10,6.44],['G',5,0.10,6.58],['F',5,0.10,6.72],
-        ['E',5,0.10,6.86],['D',5,0.10,7.00],
-        ['C',5,0.14,7.18],['E',5,0.14,7.36],['G',5,0.14,7.54],['C',6,0.50,7.72],
-    ];
-    const FEVER_BASS=[
-        ['C',3,0.08,0.00],['C',3,0.08,0.24],['G',3,0.08,0.48],['G',3,0.08,0.72],
-        ['C',3,0.08,1.00],['G',3,0.08,1.20],['C',3,0.08,1.40],['G',3,0.08,1.60],
-        ['F',3,0.08,1.90],['C',3,0.08,2.10],['G',3,0.08,2.40],['D',4,0.08,2.60],
-        ['C',3,0.08,2.80],['G',3,0.08,3.00],['C',3,0.08,3.20],['G',3,0.08,3.50],
-        ['C',3,0.08,3.80],['G',3,0.08,4.00],
-        ['C',3,0.08,4.30],['G',3,0.08,4.54],['C',4,0.08,4.78],['G',3,0.08,5.02],
-        ['C',3,0.08,5.30],['G',3,0.08,5.50],['A',3,0.08,5.70],['F',3,0.08,5.90],
-        ['C',3,0.08,6.30],['G',3,0.08,6.58],['C',3,0.08,6.86],['G',3,0.08,7.18],
-        ['C',3,0.12,7.54],['G',3,0.12,7.72],
-    ];
-    const FEVER_LEN=8.40;
-
-    function playNote(note,oct,dur,when,vol,g){
-        const osc=ctx.createOscillator(), gn=ctx.createGain();
-        osc.type='triangle';
-        osc.frequency.setValueAtTime(fr(note,oct),when);
-        gn.gain.setValueAtTime(0,when);
-        gn.gain.linearRampToValueAtTime(vol,when+0.012);
-        gn.gain.exponentialRampToValueAtTime(vol*0.25,when+dur*0.55);
-        gn.gain.exponentialRampToValueAtTime(0.0001,when+dur);
-        osc.connect(gn); gn.connect(g);
-        osc.start(when); osc.stop(when+dur+0.05);
-    }
-
-    function scheduleNormal(){
-        if(!playing||isFever)return;
-        const now=ctx.currentTime;
-        NORMAL_MELODY.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.22,normalGain));
-        NORMAL_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.10,normalGain));
-        normalLoop=setTimeout(scheduleNormal,(NORMAL_LEN-0.05)*1000);
-    }
-    function scheduleFever(){
-        if(!playing||!isFever)return;
-        const now=ctx.currentTime;
-        FEVER_MELODY.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.28,feverGain));
-        FEVER_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.13,feverGain));
-        feverLoop=setTimeout(scheduleFever,(FEVER_LEN-0.05)*1000);
-    }
-    function crossFade(from,to,dur){
-        const now=ctx.currentTime;
-        from.gain.setValueAtTime(from.gain.value,now);
-        from.gain.linearRampToValueAtTime(0,now+dur);
-        to.gain.setValueAtTime(0,now);
-        to.gain.linearRampToValueAtTime(0.7,now+dur);
-    }
-    function setup(){
-        ctx=new(window.AudioContext||window.webkitAudioContext)();
-        masterGain=ctx.createGain(); masterGain.gain.value=1; masterGain.connect(ctx.destination);
-        normalGain=ctx.createGain(); normalGain.gain.value=0.7; normalGain.connect(masterGain);
-        feverGain=ctx.createGain();  feverGain.gain.value=0;   feverGain.connect(masterGain);
-    }
-
-    return {
-        start(){
-            if(started)return;
-            started=true; setup();
-            endingGain=ctx.createGain(); endingGain.gain.value=0; endingGain.connect(masterGain);
-            if(ctx.state==='suspended')ctx.resume();
-            playing=true; isFever=false; isEnding=false;
-            scheduleNormal();
-        },
-        restart(){
-            if(!started)return;
-            clearTimeout(normalLoop); clearTimeout(feverLoop); clearTimeout(endingLoop);
-            playing=false; isFever=false; isEnding=false;
-            const now=ctx.currentTime;
-            normalGain.gain.cancelScheduledValues(now); normalGain.gain.setValueAtTime(0,now);
-            feverGain.gain.cancelScheduledValues(now);  feverGain.gain.setValueAtTime(0,now);
-            endingGain.gain.cancelScheduledValues(now); endingGain.gain.setValueAtTime(0,now);
-            if(ctx.state==='suspended')ctx.resume();
-            playing=true;
-            normalGain.gain.linearRampToValueAtTime(0.7,now+0.3);
-            scheduleNormal();
-        },
-        switchFever(){
-            if(!started||isEnding)return;
-            isFever=true;
-            clearTimeout(normalLoop);
-            crossFade(normalGain,feverGain,0.5);
-            setTimeout(scheduleFever,100);
-        },
-        switchNormal(){
-            if(!started||isEnding)return;
-            isFever=false;
-            clearTimeout(feverLoop);
-            crossFade(feverGain,normalGain,0.8);
-            setTimeout(scheduleNormal,100);
-        },
-        switchEnding(){
-            if(!started)return;
-            isEnding=true; isFever=false;
-            clearTimeout(normalLoop); clearTimeout(feverLoop);
-            const now=ctx.currentTime;
-            normalGain.gain.setValueAtTime(normalGain.gain.value,now);
-            normalGain.gain.linearRampToValueAtTime(0,now+1.5);
-            feverGain.gain.setValueAtTime(feverGain.gain.value,now);
-            feverGain.gain.linearRampToValueAtTime(0,now+1.5);
-            endingGain.gain.setValueAtTime(0,now);
-            endingGain.gain.linearRampToValueAtTime(0.7,now+1.5);
-            setTimeout(scheduleEnding,200);
-        },
-    };
-})();
-
-document.body.addEventListener('click',()=>BGM.start(),{once:true});
-
-// ───────────────────────────────────────────────────
+// ═══════════════════════════════
 // 🎮 게임 로직
-// ───────────────────────────────────────────────────
+// ═══════════════════════════════
 const GW=7, GH=9, TIME_LIMIT=180, URGENT=30;
 const THEMES = {
     fruit:  ['🍇','🍓','🍒','🍊','🍋','🍌','🍎','🍉','🍑','🍍','🥝','🥥','🍈','🥭','🫐'],
@@ -651,7 +514,7 @@ const THEMES = {
     food:   ['🍕','🍔','🍗','🌭','🍟','🍰','🍪','🍩','🥐','🥖','🧀','🥓','🥚','🍱','🍜'],
     vehicle:['🚲','🛴','🏍️','🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚']
 };
-const NAMES={fruit:'과일',animal:'동물',seafood:'해산물',heart:'하트',hand:'손',sports:'스포츠',food:'음식',vehicle:'탈것'};
+const NAMES={fruit:'과일',animal:'동물',seafood:'해산물',heart:'하트',sports:'스포츠',food:'음식',vehicle:'탈것'};
 const THEME_KEYS=Object.keys(THEMES);
 const SPECIAL_TYPES={
     time: {emoji:'⏰',label:'타임+10',cls:'special-time',desc:'더블클릭 → 시간 +10초'},
@@ -665,11 +528,8 @@ let remainingTime,timeInterval,lastSubmittedId=null;
 let feverGauge=0,feverActive=false,feverInterval=null,feverRemain=0;
 let specialItems=[],mergeCount=0,specialSelected=null;
 let lastClickTime=0,lastClickCell=null;
-let mergeHighlights=[];
-let finalUsedTime=0;
+let mergeHighlights=[],finalUsedTime=0;
 let specialThreshold=3+Math.floor(Math.random()*3);
-
-// ✅ 핵심: 게임 내내 실제 최고레벨을 추적하는 변수
 let peakLevel=1;
 
 function showEndingEffect(title,sub,callback){
@@ -702,18 +562,15 @@ function triggerEnd(type){
     if(type==='timeout'){
         timedOut=true; finalUsedTime=TIME_LIMIT;
         if(hintTimer)clearTimeout(hintTimer);
-        endFever();
-        BGM.switchEnding();
+        endFever(); BGM.switchEnding();
         showEndingEffect('⏰ 시간 종료!',`점수 ${score}점`,()=>render());
     } else if(type==='over'){
         over=true; finalUsedTime=TIME_LIMIT-remainingTime;
-        clearInterval(timeInterval); endFever();
-        BGM.switchEnding();
+        clearInterval(timeInterval); endFever(); BGM.switchEnding();
         showEndingEffect('💀 게임 오버',`점수 ${score}점`,()=>render());
     } else if(type==='success'){
         success=true; finalUsedTime=TIME_LIMIT-remainingTime;
-        clearInterval(timeInterval);
-        BGM.switchEnding();
+        clearInterval(timeInterval); BGM.switchEnding();
         showEndingEffect('🎉 Lv.15 달성!',`점수 ${score}점`,()=>render());
     } else if(type==='ended'){
         ended=true; finalUsedTime=TIME_LIMIT-remainingTime;
@@ -741,7 +598,7 @@ function init(){
     feverGauge=0;feverActive=false;feverRemain=0;
     specialItems=[];mergeCount=0;specialSelected=null;mergeHighlights=[];finalUsedTime=0;
     specialThreshold=3+Math.floor(Math.random()*3);
-    peakLevel=1; // ✅ 새게임 시 초기화
+    peakLevel=1;
     if(feverInterval)clearInterval(feverInterval);
     stopFeverVisuals();
     startTimer();render();startHint();
@@ -781,11 +638,7 @@ function updateBars(){
     document.getElementById('feverBarFill').style.width=(feverGauge/FEVER_MAX*100)+'%';
     document.getElementById('feverBarCount').textContent=feverActive?`🔥 ${feverRemain}초`:`${feverGauge}/${FEVER_MAX}`;
 }
-
-// ✅ 합치기가 발생할 때마다 peakLevel 갱신
-function updatePeakLevel(newLevel){
-    if(newLevel > peakLevel) peakLevel = newLevel;
-}
+function updatePeakLevel(newLevel){if(newLevel>peakLevel)peakLevel=newLevel;}
 
 function trySpawnSpecial(mergedLevel){
     if(mergedLevel<3)return;
@@ -813,21 +666,17 @@ function applyThemeMerge(theme){
         }
     }
     const levels=Object.keys(byLevel).map(Number).sort((a,b)=>a-b);
-    let merged=false;
-    const newItems=[];
+    let merged=false; const newItems=[];
     for(const lv of levels){
         const cells=byLevel[lv];
         if(!cells||cells.length<2||lv>=14)continue;
         merged=true;
-        const nl=lv+1;
-        const pairCount=Math.floor(cells.length/2);
+        const nl=lv+1, pairCount=Math.floor(cells.length/2);
         for(let i=0;i<pairCount*2;i++) grid[cells[i].r][cells[i].c]=null;
         for(let i=0;i<pairCount;i++){
             const {r,c}=cells[i];
-            grid[r][c]={theme,level:nl};
-            newItems.push({r,c});
-            score+=calcScore(nl);
-            updatePeakLevel(nl+1); // ✅ level은 0-index → +1로 표시값 갱신
+            grid[r][c]={theme,level:nl}; newItems.push({r,c});
+            score+=calcScore(nl); updatePeakLevel(nl+1);
             if(nl===14){triggerEnd('success');return;}
         }
     }
@@ -839,13 +688,7 @@ function applyThemeMerge(theme){
 
 function showToast(msg){
     let t=document.getElementById('toast');
-    if(!t){
-        t=document.createElement('div');t.id='toast';
-        Object.assign(t.style,{position:'fixed',bottom:'60px',left:'50%',transform:'translateX(-50%)',
-        background:'rgba(0,0,0,0.75)',color:'white',padding:'8px 16px',borderRadius:'20px',
-        fontSize:'13px',zIndex:'99998',transition:'opacity 0.3s',pointerEvents:'none'});
-        document.body.appendChild(t);
-    }
+    if(!t){t=document.createElement('div');t.id='toast';Object.assign(t.style,{position:'fixed',bottom:'60px',left:'50%',transform:'translateX(-50%)',background:'rgba(0,0,0,0.75)',color:'white',padding:'8px 16px',borderRadius:'20px',fontSize:'13px',zIndex:'99998',transition:'opacity 0.3s',pointerEvents:'none'});document.body.appendChild(t);}
     t.textContent=msg;t.style.opacity='1';
     clearTimeout(t._to);t._to=setTimeout(()=>t.style.opacity='0',1800);
 }
@@ -858,13 +701,8 @@ function clickCell(r,c){
         const isDbl=(now-lastClickTime<400&&lastClickCell&&lastClickCell.r===r&&lastClickCell.c===c);
         lastClickTime=now;lastClickCell={r,c};
         if(sp.type==='time'){
-            if(isDbl){
-                remainingTime=Math.min(remainingTime+10,TIME_LIMIT*2);
-                removeSpecialAt(r,c);showToast('⏰ 시간 +10초!');render();return;
-            } else {
-                if(specialSelected&&specialSelected.r===r&&specialSelected.c===c){specialSelected=null;render();return;}
-                specialSelected={r,c,type:'time'};showToast('⏰ 더블클릭하면 시간 +10초!');render();return;
-            }
+            if(isDbl){remainingTime=Math.min(remainingTime+10,TIME_LIMIT*2);removeSpecialAt(r,c);showToast('⏰ 시간 +10초!');render();return;}
+            else{if(specialSelected&&specialSelected.r===r&&specialSelected.c===c){specialSelected=null;render();return;}specialSelected={r,c,type:'time'};showToast('⏰ 더블클릭하면 시간 +10초!');render();return;}
         }
         if(sp.type==='theme'){
             if(specialSelected&&specialSelected.r===r&&specialSelected.c===c){specialSelected=null;render();return;}
@@ -882,9 +720,7 @@ function clickCell(r,c){
             const nl=sel.level+1;
             grid[r][c]={theme:sel.theme,level:nl};
             grid[selected.r][selected.c]=null;
-            score+=calcScore(nl);
-            updatePeakLevel(nl+1); // ✅ level은 0-index → +1로 표시값 갱신
-            addFeverGauge();trySpawnSpecial(nl-1);
+            score+=calcScore(nl);updatePeakLevel(nl+1);addFeverGauge();trySpawnSpecial(nl-1);
             if(nl===14){triggerEnd('success');return;}
             selected=null;hints=[];render();checkOver();startHint();
         } else if(!tgt){
@@ -899,9 +735,7 @@ function clickCell(r,c){
         if(tgt&&tgt.theme===current.theme&&tgt.level===current.level&&current.level<14){
             const nl=current.level+1;
             grid[r][c]={theme:current.theme,level:nl};
-            score+=calcScore(nl);
-            updatePeakLevel(nl+1); // ✅ level은 0-index → +1로 표시값 갱신
-            addFeverGauge();trySpawnSpecial(nl-1);
+            score+=calcScore(nl);updatePeakLevel(nl+1);addFeverGauge();trySpawnSpecial(nl-1);
             if(nl===14){triggerEnd('success');return;}
             current=random();hints=[];render();checkOver();startHint();
         } else if(!tgt){
@@ -958,16 +792,16 @@ function render(){
         document.getElementById('successTime').textContent=getTimeStr();
     } else if(timedOut){
         document.getElementById('gameTimeoutBox').style.display='block';
-        document.getElementById('timeoutLevel').textContent=peakLevel; // ✅
+        document.getElementById('timeoutLevel').textContent=peakLevel;
         document.getElementById('timeoutScore').textContent=score;
     } else if(ended){
         document.getElementById('gameEndBox').style.display='block';
-        document.getElementById('endLevel').textContent=peakLevel; // ✅
+        document.getElementById('endLevel').textContent=peakLevel;
         document.getElementById('endScore').textContent=score;
     } else if(over){
         document.getElementById('gameOverBox').style.display='block';
         document.getElementById('finalScore').textContent=score;
-        document.getElementById('finalLevel').textContent=peakLevel; // ✅
+        document.getElementById('finalLevel').textContent=peakLevel;
     }
     const g=document.getElementById('grid');g.innerHTML='';
     if(ended||over||success||timedOut)return;
@@ -1053,8 +887,6 @@ function resetGame(){
     init();
 }
 
-// ✅ getMaxLevel() 완전 제거 → peakLevel로 통일
-// submitRanking에서도 peakLevel 사용
 async function submitRanking(type){
     const fm={success:'nameInputFieldSuccess',over:'nameInputFieldOver',timeout:'nameInputFieldTimeout',end:'nameInputFieldEnd'};
     const bm={success:'submitSuccess',over:'submitOver',timeout:'submitTimeout',end:'submitEnd'};
@@ -1064,10 +896,10 @@ async function submitRanking(type){
     if(!name){alert('닉네임을 입력해주세요!');return;}
     retry.classList.remove('show');btn.disabled=true;btn.textContent='등록 중...';
     try{
-        const lv = success ? 15 : peakLevel; // ✅ peakLevel로 저장
+        const lv=success?15:peakLevel;
         const ref=await window.db.collection('rankings').add({
-            name, score, time:finalUsedTime, level:lv,
-            timestamp:Date.now(), date:new Date().toISOString()
+            name,score,time:finalUsedTime,level:lv,
+            timestamp:Date.now(),date:new Date().toISOString()
         });
         lastSubmittedId=ref.id;field.value='';retry.classList.remove('show');showRanking();
     }catch(e){retry.classList.add('show');}
@@ -1080,10 +912,7 @@ async function showRanking(){
     document.getElementById('rankingPopup').classList.add('show');
     try{
         const snap=await window.db.collection('rankings')
-            .orderBy('score','desc')
-            .orderBy('level','desc')
-            .orderBy('name','asc')
-            .limit(50).get();
+            .orderBy('score','desc').orderBy('level','desc').orderBy('name','asc').limit(50).get();
         const rankings=snap.docs.map(d=>({id:d.id,...d.data()}));
         const myIndex=lastSubmittedId?rankings.findIndex(r=>r.id===lastSubmittedId):-1;
         const top10=rankings.slice(0,10);
@@ -1101,33 +930,9 @@ async function showRanking(){
         }
         content.innerHTML=html;
     }catch(e){
-        content.innerHTML=`<div style="text-align:center;padding:20px;"><p style="color:#ef4444;font-weight:bold;">랭킹을 불러오지 못했습니다.</p>
-        <button onclick="showRanking()" style="margin-top:12px;padding:8px 20px;background:linear-gradient(to right,#9333ea,#ec4899);color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">🔄 다시 시도</button></div>`;
+        content.innerHTML=`<div style="text-align:center;padding:20px;"><p style="color:#ef4444;font-weight:bold;">랭킹을 불러오지 못했습니다.</p><button onclick="showRanking()" style="margin-top:12px;padding:8px 20px;background:linear-gradient(to right,#9333ea,#ec4899);color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">🔄 다시 시도</button></div>`;
     }
 }
-
-document.getElementById('fillBtn').addEventListener('click',fillEmpty);
-document.getElementById('resetBtn').addEventListener('click',resetGame);
-document.getElementById('helpBtn').addEventListener('click',showHelp);
-document.getElementById('closeHelp').addEventListener('click',()=>document.getElementById('helpPopup').classList.remove('show'));
-document.getElementById('rankingBtn').addEventListener('click',showRanking);
-document.getElementById('closeRanking').addEventListener('click',()=>document.getElementById('rankingPopup').classList.remove('show'));
-document.getElementById('rankingPopup').addEventListener('click',e=>{if(e.target===e.currentTarget)document.getElementById('rankingPopup').classList.remove('show');});
-document.getElementById('helpPopup').addEventListener('click',e=>{if(e.target===e.currentTarget)document.getElementById('helpPopup').classList.remove('show');});
-document.getElementById('submitSuccess').addEventListener('click',()=>submitRanking('success'));
-document.getElementById('submitOver').addEventListener('click',()=>submitRanking('over'));
-document.getElementById('submitTimeout').addEventListener('click',()=>submitRanking('timeout'));
-document.getElementById('submitEnd').addEventListener('click',()=>submitRanking('end'));
-document.getElementById('endBtn').addEventListener('click',()=>document.getElementById('confirmPopup').style.display='flex');
-document.getElementById('confirmNo').addEventListener('click',()=>document.getElementById('confirmPopup').style.display='none');
-document.getElementById('confirmYes').addEventListener('click',()=>{
-    document.getElementById('confirmPopup').style.display='none';
-    if(hintTimer)clearTimeout(hintTimer);
-    if(timeInterval)clearInterval(timeInterval);
-    if(feverInterval)clearInterval(feverInterval);
-    finalUsedTime=TIME_LIMIT-remainingTime;
-    showEndingEffect('⏹️ 게임 종료',`점수 ${score}점`,()=>{ended=true;render();});
-});
 
 function showHelp(){
     const c=document.getElementById('helpContent');
@@ -1164,6 +969,30 @@ function showHelp(){
     }
     document.getElementById('helpPopup').classList.add('show');
 }
+
+document.getElementById('fillBtn').addEventListener('click',fillEmpty);
+document.getElementById('resetBtn').addEventListener('click',resetGame);
+document.getElementById('helpBtn').addEventListener('click',showHelp);
+document.getElementById('closeHelp').addEventListener('click',()=>document.getElementById('helpPopup').classList.remove('show'));
+document.getElementById('rankingBtn').addEventListener('click',showRanking);
+document.getElementById('closeRanking').addEventListener('click',()=>document.getElementById('rankingPopup').classList.remove('show'));
+document.getElementById('rankingPopup').addEventListener('click',e=>{if(e.target===e.currentTarget)document.getElementById('rankingPopup').classList.remove('show');});
+document.getElementById('helpPopup').addEventListener('click',e=>{if(e.target===e.currentTarget)document.getElementById('helpPopup').classList.remove('show');});
+document.getElementById('submitSuccess').addEventListener('click',()=>submitRanking('success'));
+document.getElementById('submitOver').addEventListener('click',()=>submitRanking('over'));
+document.getElementById('submitTimeout').addEventListener('click',()=>submitRanking('timeout'));
+document.getElementById('submitEnd').addEventListener('click',()=>submitRanking('end'));
+document.getElementById('endBtn').addEventListener('click',()=>document.getElementById('confirmPopup').style.display='flex');
+document.getElementById('confirmNo').addEventListener('click',()=>document.getElementById('confirmPopup').style.display='none');
+document.getElementById('confirmYes').addEventListener('click',()=>{
+    document.getElementById('confirmPopup').style.display='none';
+    if(hintTimer)clearTimeout(hintTimer);
+    if(timeInterval)clearInterval(timeInterval);
+    if(feverInterval)clearInterval(feverInterval);
+    finalUsedTime=TIME_LIMIT-remainingTime;
+    showEndingEffect('⏹️ 게임 종료',`점수 ${score}점`,()=>{ended=true;render();});
+    BGM.switchEnding();
+});
 
 function setVH(){document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px');}
 window.addEventListener('resize',()=>{setVH();fitGrid();});
