@@ -303,9 +303,190 @@ window.db = firebase.firestore();
 </script>
 <script>
 // ───────────────────────────────────────────────────
-// 🎵 BGM 시스템 (평소 ↔ 피버 크로스페이드)
+// 🎵 BGM 시스템 (평소 ↔ 피버 ↔ 엔딩 크로스페이드)
 // ───────────────────────────────────────────────────
 const BGM = (function(){
+    let ctx=null, masterGain=null, normalGain=null, feverGain=null, endingGain=null;
+    let playing=false, isFever=false, isEnding=false, started=false;
+    let normalLoop=null, feverLoop=null, endingLoop=null;
+
+    const NF={C:261.63,D:293.66,E:329.63,F:349.23,G:392.00,A:440.00,B:493.88,'C#':277.18,'D#':311.13,'F#':369.99,'G#':415.30,'A#':466.16};
+    function fr(note,oct){return NF[note]*Math.pow(2,oct-4);}
+
+    const NORMAL_MELODY=[
+        ['E',5,0.18,0.00],['E',5,0.18,0.22],['E',5,0.18,0.44],['E',5,0.28,0.66],
+        ['D',5,0.18,1.05],['C',5,0.18,1.28],['B',4,0.40,1.50],
+        ['G',5,0.18,2.20],['G',5,0.18,2.42],['G',5,0.18,2.64],['A',5,0.28,2.86],
+        ['G',5,0.18,3.25],['E',5,0.18,3.48],['C',5,0.50,3.70],
+        ['C',5,0.18,4.50],['D',5,0.18,4.72],['E',5,0.18,4.94],['F',5,0.18,5.16],
+        ['G',5,0.38,5.38],
+        ['A',5,0.18,5.90],['G',5,0.18,6.12],['F',5,0.18,6.34],['E',5,0.28,6.56],
+        ['D',5,0.18,7.00],['C',5,0.18,7.22],['B',4,0.18,7.44],['A',4,0.18,7.66],
+        ['G',4,0.55,7.88],
+        ['C',5,0.20,8.60],['E',5,0.20,8.86],['G',5,0.20,9.12],['C',6,0.60,9.38],
+    ];
+    const NORMAL_BASS=[
+        ['C',3,0.12,0.00],['G',3,0.12,0.50],['C',3,0.12,1.00],['G',3,0.12,1.50],
+        ['G',3,0.12,2.20],['D',4,0.12,2.70],['C',3,0.12,3.20],['G',3,0.12,3.70],
+        ['C',3,0.12,4.50],['F',3,0.12,5.00],['G',3,0.12,5.50],['C',3,0.12,6.00],
+        ['G',3,0.12,6.50],['G',3,0.12,7.00],['C',3,0.12,7.50],['G',3,0.12,8.00],
+        ['C',3,0.18,8.60],['E',3,0.18,8.86],['G',3,0.18,9.12],['C',4,0.45,9.38],
+    ];
+    const NORMAL_LEN=10.20;
+
+    const FEVER_MELODY=[
+        ['C',5,0.10,0.00],['D',5,0.10,0.12],['E',5,0.10,0.24],['G',5,0.10,0.36],
+        ['A',5,0.10,0.48],['G',5,0.10,0.60],['E',5,0.10,0.72],['C',5,0.10,0.84],
+        ['G',5,0.14,1.00],['G',5,0.14,1.18],['A',5,0.14,1.36],['B',5,0.22,1.54],
+        ['A',5,0.10,1.90],['G',5,0.10,2.04],['F',5,0.10,2.18],['E',5,0.10,2.32],
+        ['D',5,0.10,2.46],['C',5,0.10,2.60],
+        ['E',5,0.10,2.80],['G',5,0.10,2.94],['B',5,0.10,3.08],['D',6,0.22,3.22],
+        ['C',6,0.08,3.55],['B',5,0.08,3.65],['C',6,0.08,3.75],['B',5,0.08,3.85],
+        ['A',5,0.22,3.95],
+        ['C',5,0.09,4.30],['E',5,0.09,4.42],['G',5,0.09,4.54],['C',6,0.09,4.66],
+        ['E',6,0.09,4.78],['C',6,0.09,4.90],['G',5,0.09,5.02],['E',5,0.09,5.14],
+        ['G',5,0.14,5.30],['A',5,0.14,5.48],['B',5,0.14,5.66],['C',6,0.35,5.84],
+        ['B',5,0.10,6.30],['A',5,0.10,6.44],['G',5,0.10,6.58],['F',5,0.10,6.72],
+        ['E',5,0.10,6.86],['D',5,0.10,7.00],
+        ['C',5,0.14,7.18],['E',5,0.14,7.36],['G',5,0.14,7.54],['C',6,0.50,7.72],
+    ];
+    const FEVER_BASS=[
+        ['C',3,0.08,0.00],['C',3,0.08,0.24],['G',3,0.08,0.48],['G',3,0.08,0.72],
+        ['C',3,0.08,1.00],['G',3,0.08,1.20],['C',3,0.08,1.40],['G',3,0.08,1.60],
+        ['F',3,0.08,1.90],['C',3,0.08,2.10],['G',3,0.08,2.40],['D',4,0.08,2.60],
+        ['C',3,0.08,2.80],['G',3,0.08,3.00],['C',3,0.08,3.20],['G',3,0.08,3.50],
+        ['C',3,0.08,3.80],['G',3,0.08,4.00],
+        ['C',3,0.08,4.30],['G',3,0.08,4.54],['C',4,0.08,4.78],['G',3,0.08,5.02],
+        ['C',3,0.08,5.30],['G',3,0.08,5.50],['A',3,0.08,5.70],['F',3,0.08,5.90],
+        ['C',3,0.08,6.30],['G',3,0.08,6.58],['C',3,0.08,6.86],['G',3,0.08,7.18],
+        ['C',3,0.12,7.54],['G',3,0.12,7.72],
+    ];
+    const FEVER_LEN=8.40;
+
+    const ENDING_MELODY=[
+        ['G',4,0.55,0.00],['E',4,0.55,0.70],['C',4,0.55,1.40],
+        ['D',4,0.55,2.20],['B',3,0.55,2.90],['G',3,0.80,3.60],
+        ['A',3,0.55,4.60],['C',4,0.55,5.30],['E',4,0.55,6.00],
+        ['D',4,0.80,6.70],
+        ['G',4,0.55,7.80],['F',4,0.55,8.50],['E',4,0.55,9.20],
+        ['C',4,0.55,9.90],['D',4,0.80,10.60],
+        ['E',4,0.55,11.70],['D',4,0.45,12.40],['C',4,0.45,12.95],['B',3,0.45,13.50],
+        ['A',3,0.80,14.05],
+        ['C',4,0.55,15.10],['E',4,0.55,15.80],['G',4,0.55,16.50],
+        ['F',4,0.80,17.20],['E',4,0.55,18.10],['D',4,0.55,18.80],
+        ['C',4,1.20,19.50],
+    ];
+    const ENDING_BASS=[
+        ['C',2,0.30,0.00],['G',2,0.30,1.40],['F',2,0.30,2.20],['C',2,0.30,3.60],
+        ['F',2,0.30,4.60],['C',2,0.30,6.00],['G',2,0.30,6.70],
+        ['C',2,0.30,7.80],['F',2,0.30,9.20],['G',2,0.30,10.60],
+        ['A',2,0.30,11.70],['F',2,0.30,12.95],['E',2,0.30,14.05],
+        ['C',2,0.30,15.10],['G',2,0.30,16.50],['F',2,0.30,18.10],
+        ['C',2,0.50,19.50],
+    ];
+    const ENDING_LEN=21.20;
+
+    function playNote(note,oct,dur,when,vol,g){
+        const osc=ctx.createOscillator(), gn=ctx.createGain();
+        osc.type='triangle';
+        osc.frequency.setValueAtTime(fr(note,oct),when);
+        gn.gain.setValueAtTime(0,when);
+        gn.gain.linearRampToValueAtTime(vol,when+0.012);
+        gn.gain.exponentialRampToValueAtTime(vol*0.25,when+dur*0.55);
+        gn.gain.exponentialRampToValueAtTime(0.0001,when+dur);
+        osc.connect(gn); gn.connect(g);
+        osc.start(when); osc.stop(when+dur+0.05);
+    }
+
+    function scheduleNormal(){
+        if(!playing||isFever||isEnding)return;
+        const now=ctx.currentTime;
+        NORMAL_MELODY.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.22,normalGain));
+        NORMAL_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.10,normalGain));
+        normalLoop=setTimeout(scheduleNormal,(NORMAL_LEN-0.05)*1000);
+    }
+    function scheduleFever(){
+        if(!playing||!isFever||isEnding)return;
+        const now=ctx.currentTime;
+        FEVER_MELODY.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.28,feverGain));
+        FEVER_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.13,feverGain));
+        feverLoop=setTimeout(scheduleFever,(FEVER_LEN-0.05)*1000);
+    }
+    function scheduleEnding(){
+        if(!playing||!isEnding)return;
+        const now=ctx.currentTime;
+        ENDING_MELODY.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.20,endingGain));
+        ENDING_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.09,endingGain));
+        endingLoop=setTimeout(scheduleEnding,(ENDING_LEN-0.05)*1000);
+    }
+    function crossFade(from,to,dur){
+        const now=ctx.currentTime;
+        from.gain.setValueAtTime(from.gain.value,now);
+        from.gain.linearRampToValueAtTime(0,now+dur);
+        to.gain.setValueAtTime(0,now);
+        to.gain.linearRampToValueAtTime(0.7,now+dur);
+    }
+    function setup(){
+        ctx=new(window.AudioContext||window.webkitAudioContext)();
+        masterGain=ctx.createGain(); masterGain.gain.value=1; masterGain.connect(ctx.destination);
+        normalGain=ctx.createGain(); normalGain.gain.value=0.7; normalGain.connect(masterGain);
+        feverGain=ctx.createGain();  feverGain.gain.value=0;   feverGain.connect(masterGain);
+        endingGain=ctx.createGain(); endingGain.gain.value=0;  endingGain.connect(masterGain);
+    }
+
+    return {
+        start(){
+            if(started)return;
+            started=true; setup();
+            if(ctx.state==='suspended')ctx.resume();
+            playing=true; isFever=false; isEnding=false;
+            scheduleNormal();
+        },
+        restart(){
+            if(!started)return;
+            clearTimeout(normalLoop); clearTimeout(feverLoop); clearTimeout(endingLoop);
+            playing=false; isFever=false; isEnding=false;
+            const now=ctx.currentTime;
+            normalGain.gain.cancelScheduledValues(now); normalGain.gain.setValueAtTime(0,now);
+            feverGain.gain.cancelScheduledValues(now);  feverGain.gain.setValueAtTime(0,now);
+            endingGain.gain.cancelScheduledValues(now); endingGain.gain.setValueAtTime(0,now);
+            if(ctx.state==='suspended')ctx.resume();
+            playing=true;
+            normalGain.gain.linearRampToValueAtTime(0.7,now+0.3);
+            scheduleNormal();
+        },
+        switchFever(){
+            if(!started||isEnding)return;
+            isFever=true; clearTimeout(normalLoop);
+            crossFade(normalGain,feverGain,0.5);
+            setTimeout(scheduleFever,100);
+        },
+        switchNormal(){
+            if(!started||isEnding)return;
+            isFever=false; clearTimeout(feverLoop);
+            crossFade(feverGain,normalGain,0.8);
+            setTimeout(scheduleNormal,100);
+        },
+        switchEnding(){
+            if(!started)return;
+            isEnding=true; isFever=false;
+            clearTimeout(normalLoop); clearTimeout(feverLoop);
+            const now=ctx.currentTime;
+            normalGain.gain.cancelScheduledValues(now);
+            normalGain.gain.setValueAtTime(normalGain.gain.value,now);
+            normalGain.gain.linearRampToValueAtTime(0,now+1.5);
+            feverGain.gain.cancelScheduledValues(now);
+            feverGain.gain.setValueAtTime(feverGain.gain.value,now);
+            feverGain.gain.linearRampToValueAtTime(0,now+1.5);
+            endingGain.gain.cancelScheduledValues(now);
+            endingGain.gain.setValueAtTime(0,now);
+            endingGain.gain.linearRampToValueAtTime(0.7,now+1.5);
+            setTimeout(scheduleEnding,200);
+        },
+    };
+})();
+
+document.body.addEventListener('click',()=>BGM.start(),{once:true});
     let ctx=null, masterGain=null, normalGain=null, feverGain=null;
     let playing=false, isFever=false, started=false;
     let normalLoop=null, feverLoop=null;
