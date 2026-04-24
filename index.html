@@ -403,18 +403,53 @@ const BGM = (function(){
         feverGain=ctx.createGain();  feverGain.gain.value=0;   feverGain.connect(masterGain);
     }
 
-started)return;
+    return {
+        start(){
+            if(started)return;
+            started=true; setup();
+            endingGain=ctx.createGain(); endingGain.gain.value=0; endingGain.connect(masterGain);
+            if(ctx.state==='suspended')ctx.resume();
+            playing=true; isFever=false; isEnding=false;
+            scheduleNormal();
+        },
+        restart(){
+            if(!started)return;
+            clearTimeout(normalLoop); clearTimeout(feverLoop); clearTimeout(endingLoop);
+            playing=false; isFever=false; isEnding=false;
+            const now=ctx.currentTime;
+            normalGain.gain.setValueAtTime(0.7,now);
+            feverGain.gain.setValueAtTime(0,now);
+            endingGain.gain.setValueAtTime(0,now);
+            if(ctx.state==='suspended')ctx.resume();
+            playing=true;
+            scheduleNormal();
+        },
+        switchFever(){
+            if(!started||isEnding)return;
             isFever=true;
             clearTimeout(normalLoop);
             crossFade(normalGain,feverGain,0.5);
             setTimeout(scheduleFever,100);
         },
         switchNormal(){
-            if(!started)return;
+            if(!started||isEnding)return;
             isFever=false;
             clearTimeout(feverLoop);
             crossFade(feverGain,normalGain,0.8);
             setTimeout(scheduleNormal,100);
+        },
+        switchEnding(){
+            if(!started)return;
+            isEnding=true; isFever=false;
+            clearTimeout(normalLoop); clearTimeout(feverLoop);
+            const now=ctx.currentTime;
+            normalGain.gain.setValueAtTime(normalGain.gain.value,now);
+            normalGain.gain.linearRampToValueAtTime(0,now+1.5);
+            feverGain.gain.setValueAtTime(feverGain.gain.value,now);
+            feverGain.gain.linearRampToValueAtTime(0,now+1.5);
+            endingGain.gain.setValueAtTime(0,now);
+            endingGain.gain.linearRampToValueAtTime(0.7,now+1.5);
+            setTimeout(scheduleEnding,200);
         },
     };
 })();
