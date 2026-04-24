@@ -161,16 +161,13 @@
     </style>
 </head>
 <body>
-
 <div class="fever-2x-badge" id="fever2xBadge">🔥 점수 2배! <span id="feverCountdown">10</span>초</div>
-
 <div id="endingScreen">
     <div class="ending-title-box">
         <div class="ending-title" id="endingTitle"></div>
         <div class="ending-sub" id="endingSub"></div>
     </div>
 </div>
-
 <div class="container">
     <div class="header">
         <h1>머지 게임</h1>
@@ -206,7 +203,6 @@
             <button class="mini-btn end-mini" id="endBtn">⏹️ 종료</button>
         </div>
     </div>
-
     <div id="gameSuccessBox" class="game-success">
         <h2>🎉 Lv.15 성공!</h2>
         <div style="font-size:14px;color:#365314;margin-bottom:6px;">점수: <span id="successScore">0</span> | 남은시간: <span id="successTime">00:00</span></div>
@@ -243,7 +239,6 @@
             <div class="retry-msg" id="retryMsgEnd">❌ 등록 실패. 다시 시도해주세요.</div>
         </div>
     </div>
-
     <div class="grid-container" id="gridContainer">
         <div id="grid" class="grid"></div>
     </div>
@@ -252,7 +247,6 @@
         <button class="help-btn" id="helpBtn">📋 도움말</button>
     </div>
 </div>
-
 <div class="theme-select-popup" id="themeSelectPopup">
     <div class="theme-select-box">
         <div class="theme-select-title">🌀 테마를 선택하세요</div>
@@ -275,7 +269,7 @@
             <div class="popup-title">🏆 글로벌 랭킹 Top 10</div>
             <button class="close-btn" id="closeRanking">×</button>
         </div>
-        <div id="rankingContent"></div>
+        <div id="rankingContent"><div class="loading">미리보기 모드 (Firebase 미연결)</div></div>
     </div>
 </div>
 <div id="confirmPopup" class="confirm-popup">
@@ -288,31 +282,13 @@
     </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
-firebase.initializeApp({
-    apiKey:"AIzaSyCJrsEnu2v7pwUdhhrw65_xg1BdR7--IkA",
-    authDomain:"merge-game-web.firebaseapp.com",
-    projectId:"merge-game-web",
-    storageBucket:"merge-game-web.firebasestorage.app",
-    messagingSenderId:"47238049366",
-    appId:"1:47238049366:web:dacb8f1276bf9e796a15f7"
-});
-window.db = firebase.firestore();
-</script>
-<script>
-// ───────────────────────────────────────────────────
-// 🎵 BGM 시스템 (평소 ↔ 피버 크로스페이드)
-// ───────────────────────────────────────────────────
 const BGM = (function(){
-    let ctx=null, masterGain=null, normalGain=null, feverGain=null;
-    let playing=false, isFever=false, started=false;
-    let normalLoop=null, feverLoop=null;
-
+    let ctx=null, masterGain=null, normalGain=null, feverGain=null, endingGain=null;
+    let playing=false, isFever=false, isEnding=false, started=false;
+    let normalLoop=null, feverLoop=null, endingLoop=null;
     const NF={C:261.63,D:293.66,E:329.63,F:349.23,G:392.00,A:440.00,B:493.88,'C#':277.18,'D#':311.13,'F#':369.99,'G#':415.30,'A#':466.16};
     function fr(note,oct){return NF[note]*Math.pow(2,oct-4);}
-
     const NORMAL_MELODY=[
         ['E',5,0.18,0.00],['E',5,0.18,0.22],['E',5,0.18,0.44],['E',5,0.28,0.66],
         ['D',5,0.18,1.05],['C',5,0.18,1.28],['B',4,0.40,1.50],
@@ -333,7 +309,6 @@ const BGM = (function(){
         ['C',3,0.18,8.60],['E',3,0.18,8.86],['G',3,0.18,9.12],['C',4,0.45,9.38],
     ];
     const NORMAL_LEN=10.20;
-
     const FEVER_MELODY=[
         ['C',5,0.10,0.00],['D',5,0.10,0.12],['E',5,0.10,0.24],['G',5,0.10,0.36],
         ['A',5,0.10,0.48],['G',5,0.10,0.60],['E',5,0.10,0.72],['C',5,0.10,0.84],
@@ -362,7 +337,27 @@ const BGM = (function(){
         ['C',3,0.12,7.54],['G',3,0.12,7.72],
     ];
     const FEVER_LEN=8.40;
-
+    const ENDING_MELODY=[
+        ['C',5,0.40,0.00],['E',5,0.40,0.55],['G',5,0.40,1.10],
+        ['A',5,0.55,1.70],['G',5,0.30,2.40],['E',5,0.30,2.80],
+        ['F',5,0.40,3.20],['E',5,0.30,3.70],['D',5,0.30,4.10],['C',5,0.70,4.50],
+        ['G',4,0.40,5.40],['B',4,0.40,5.95],['D',5,0.40,6.50],
+        ['E',5,0.55,7.10],['D',5,0.30,7.80],['B',4,0.30,8.20],
+        ['C',5,0.40,8.60],['B',4,0.30,9.10],['A',4,0.30,9.50],['G',4,0.90,9.90],
+        ['E',5,0.40,11.00],['G',5,0.40,11.55],['A',5,0.40,12.10],
+        ['C',6,0.65,12.70],['B',5,0.35,13.50],['A',5,0.35,13.95],
+        ['G',5,0.40,14.40],['F',5,0.35,14.90],['E',5,0.35,15.30],
+        ['D',5,0.40,15.70],['C',5,0.40,16.20],
+        ['E',5,0.35,16.80],['G',5,0.35,17.20],['C',6,1.20,17.60],
+    ];
+    const ENDING_BASS=[
+        ['C',3,0.25,0.00],['G',3,0.25,1.10],['F',3,0.25,2.20],['C',3,0.25,3.20],
+        ['G',3,0.25,4.50],['C',3,0.25,5.40],['G',3,0.25,6.50],['F',3,0.25,7.50],
+        ['C',3,0.25,8.60],['G',3,0.25,9.90],
+        ['A',2,0.25,11.00],['F',3,0.25,12.10],['C',3,0.25,13.50],
+        ['G',3,0.25,14.40],['F',3,0.25,15.70],['C',3,0.25,16.80],['C',3,0.50,17.60],
+    ];
+    const ENDING_LEN=19.20;
     function playNote(note,oct,dur,when,vol,g){
         const osc=ctx.createOscillator(), gn=ctx.createGain();
         osc.type='triangle';
@@ -374,20 +369,26 @@ const BGM = (function(){
         osc.connect(gn); gn.connect(g);
         osc.start(when); osc.stop(when+dur+0.05);
     }
-
     function scheduleNormal(){
-        if(!playing||isFever)return;
+        if(!playing||isFever||isEnding)return;
         const now=ctx.currentTime;
         NORMAL_MELODY.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.22,normalGain));
         NORMAL_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.10,normalGain));
         normalLoop=setTimeout(scheduleNormal,(NORMAL_LEN-0.05)*1000);
     }
     function scheduleFever(){
-        if(!playing||!isFever)return;
+        if(!playing||!isFever||isEnding)return;
         const now=ctx.currentTime;
         FEVER_MELODY.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.28,feverGain));
         FEVER_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.13,feverGain));
         feverLoop=setTimeout(scheduleFever,(FEVER_LEN-0.05)*1000);
+    }
+    function scheduleEnding(){
+        if(!playing||!isEnding)return;
+        const now=ctx.currentTime;
+        ENDING_MELODY.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.20,endingGain));
+        ENDING_BASS.forEach(([n,o,d,t])=>playNote(n,o,d,now+t,0.09,endingGain));
+        endingLoop=setTimeout(scheduleEnding,(ENDING_LEN-0.05)*1000);
     }
     function crossFade(from,to,dur){
         const now=ctx.currentTime;
@@ -401,13 +402,12 @@ const BGM = (function(){
         masterGain=ctx.createGain(); masterGain.gain.value=1; masterGain.connect(ctx.destination);
         normalGain=ctx.createGain(); normalGain.gain.value=0.7; normalGain.connect(masterGain);
         feverGain=ctx.createGain();  feverGain.gain.value=0;   feverGain.connect(masterGain);
+        endingGain=ctx.createGain(); endingGain.gain.value=0;  endingGain.connect(masterGain);
     }
-
     return {
         start(){
             if(started)return;
             started=true; setup();
-            endingGain=ctx.createGain(); endingGain.gain.value=0; endingGain.connect(masterGain);
             if(ctx.state==='suspended')ctx.resume();
             playing=true; isFever=false; isEnding=false;
             scheduleNormal();
@@ -426,15 +426,13 @@ const BGM = (function(){
         },
         switchFever(){
             if(!started||isEnding)return;
-            isFever=true;
-            clearTimeout(normalLoop);
+            isFever=true; clearTimeout(normalLoop);
             crossFade(normalGain,feverGain,0.5);
             setTimeout(scheduleFever,100);
         },
         switchNormal(){
             if(!started||isEnding)return;
-            isFever=false;
-            clearTimeout(feverLoop);
+            isFever=false; clearTimeout(feverLoop);
             crossFade(feverGain,normalGain,0.8);
             setTimeout(scheduleNormal,100);
         },
@@ -454,11 +452,8 @@ const BGM = (function(){
     };
 })();
 
-document.body.addEventListener('click',()=>BGM.start(),{once:true});
+document.body.addEventListener('click',()=>BGM.start());
 
-// ───────────────────────────────────────────────────
-// 🎮 게임 로직
-// ───────────────────────────────────────────────────
 const GW=7, GH=9, TIME_LIMIT=180, URGENT=30;
 const THEMES = {
     fruit:  ['🍇','🍓','🍒','🍊','🍋','🍌','🍎','🍉','🍑','🍍','🥝','🥥','🍈','🥭','🫐'],
@@ -472,7 +467,7 @@ const THEMES = {
 const NAMES={fruit:'과일',animal:'동물',seafood:'해산물',heart:'하트',hand:'손',sports:'스포츠',food:'음식',vehicle:'탈것'};
 const THEME_KEYS=Object.keys(THEMES);
 const SPECIAL_TYPES={
-    time: {emoji:'⏰',label:'타임+10',cls:'special-time',desc:'더블클릭 → 시간 +10초'},
+    time:{emoji:'⏰',label:'타임+10',cls:'special-time',desc:'더블클릭 → 시간 +10초'},
     theme:{emoji:'🌀',label:'테마합치기',cls:'special-theme',desc:'클릭 → 테마 선택 → 해당 테마 전부 다음 레벨로'}
 };
 const SPECIAL_KEYS=Object.keys(SPECIAL_TYPES);
@@ -483,11 +478,8 @@ let remainingTime,timeInterval,lastSubmittedId=null;
 let feverGauge=0,feverActive=false,feverInterval=null,feverRemain=0;
 let specialItems=[],mergeCount=0,specialSelected=null;
 let lastClickTime=0,lastClickCell=null;
-let mergeHighlights=[];
-let finalUsedTime=0;
+let mergeHighlights=[],finalUsedTime=0;
 let specialThreshold=3+Math.floor(Math.random()*3);
-
-// ✅ 핵심: 게임 내내 실제 최고레벨을 추적하는 변수
 let peakLevel=1;
 
 function showEndingEffect(title,sub,callback){
@@ -520,18 +512,15 @@ function triggerEnd(type){
     if(type==='timeout'){
         timedOut=true; finalUsedTime=TIME_LIMIT;
         if(hintTimer)clearTimeout(hintTimer);
-        endFever();
-        BGM.switchEnding();
+        endFever(); BGM.switchEnding();
         showEndingEffect('⏰ 시간 종료!',`점수 ${score}점`,()=>render());
     } else if(type==='over'){
         over=true; finalUsedTime=TIME_LIMIT-remainingTime;
-        clearInterval(timeInterval); endFever();
-        BGM.switchEnding();
+        clearInterval(timeInterval); endFever(); BGM.switchEnding();
         showEndingEffect('💀 게임 오버',`점수 ${score}점`,()=>render());
     } else if(type==='success'){
         success=true; finalUsedTime=TIME_LIMIT-remainingTime;
-        clearInterval(timeInterval);
-        BGM.switchEnding();
+        clearInterval(timeInterval); BGM.switchEnding();
         showEndingEffect('🎉 Lv.15 달성!',`점수 ${score}점`,()=>render());
     } else if(type==='ended'){
         ended=true; finalUsedTime=TIME_LIMIT-remainingTime;
@@ -559,7 +548,7 @@ function init(){
     feverGauge=0;feverActive=false;feverRemain=0;
     specialItems=[];mergeCount=0;specialSelected=null;mergeHighlights=[];finalUsedTime=0;
     specialThreshold=3+Math.floor(Math.random()*3);
-    peakLevel=1; // ✅ 새게임 시 초기화
+    peakLevel=1;
     if(feverInterval)clearInterval(feverInterval);
     stopFeverVisuals();
     startTimer();render();startHint();
@@ -599,11 +588,7 @@ function updateBars(){
     document.getElementById('feverBarFill').style.width=(feverGauge/FEVER_MAX*100)+'%';
     document.getElementById('feverBarCount').textContent=feverActive?`🔥 ${feverRemain}초`:`${feverGauge}/${FEVER_MAX}`;
 }
-
-// ✅ 합치기가 발생할 때마다 peakLevel 갱신
-function updatePeakLevel(newLevel){
-    if(newLevel > peakLevel) peakLevel = newLevel;
-}
+function updatePeakLevel(newLevel){if(newLevel>peakLevel)peakLevel=newLevel;}
 
 function trySpawnSpecial(mergedLevel){
     if(mergedLevel<3)return;
@@ -631,21 +616,17 @@ function applyThemeMerge(theme){
         }
     }
     const levels=Object.keys(byLevel).map(Number).sort((a,b)=>a-b);
-    let merged=false;
-    const newItems=[];
+    let merged=false; const newItems=[];
     for(const lv of levels){
         const cells=byLevel[lv];
         if(!cells||cells.length<2||lv>=14)continue;
         merged=true;
-        const nl=lv+1;
-        const pairCount=Math.floor(cells.length/2);
+        const nl=lv+1, pairCount=Math.floor(cells.length/2);
         for(let i=0;i<pairCount*2;i++) grid[cells[i].r][cells[i].c]=null;
         for(let i=0;i<pairCount;i++){
             const {r,c}=cells[i];
-            grid[r][c]={theme,level:nl};
-            newItems.push({r,c});
-            score+=calcScore(nl);
-            updatePeakLevel(nl+1); // ✅ level은 0-index → +1로 표시값 갱신
+            grid[r][c]={theme,level:nl}; newItems.push({r,c});
+            score+=calcScore(nl); updatePeakLevel(nl+1);
             if(nl===14){triggerEnd('success');return;}
         }
     }
@@ -676,13 +657,8 @@ function clickCell(r,c){
         const isDbl=(now-lastClickTime<400&&lastClickCell&&lastClickCell.r===r&&lastClickCell.c===c);
         lastClickTime=now;lastClickCell={r,c};
         if(sp.type==='time'){
-            if(isDbl){
-                remainingTime=Math.min(remainingTime+10,TIME_LIMIT*2);
-                removeSpecialAt(r,c);showToast('⏰ 시간 +10초!');render();return;
-            } else {
-                if(specialSelected&&specialSelected.r===r&&specialSelected.c===c){specialSelected=null;render();return;}
-                specialSelected={r,c,type:'time'};showToast('⏰ 더블클릭하면 시간 +10초!');render();return;
-            }
+            if(isDbl){remainingTime=Math.min(remainingTime+10,TIME_LIMIT*2);removeSpecialAt(r,c);showToast('⏰ 시간 +10초!');render();return;}
+            else{if(specialSelected&&specialSelected.r===r&&specialSelected.c===c){specialSelected=null;render();return;}specialSelected={r,c,type:'time'};showToast('⏰ 더블클릭하면 시간 +10초!');render();return;}
         }
         if(sp.type==='theme'){
             if(specialSelected&&specialSelected.r===r&&specialSelected.c===c){specialSelected=null;render();return;}
@@ -700,9 +676,7 @@ function clickCell(r,c){
             const nl=sel.level+1;
             grid[r][c]={theme:sel.theme,level:nl};
             grid[selected.r][selected.c]=null;
-            score+=calcScore(nl);
-            updatePeakLevel(nl+1); // ✅ level은 0-index → +1로 표시값 갱신
-            addFeverGauge();trySpawnSpecial(nl-1);
+            score+=calcScore(nl);updatePeakLevel(nl+1);addFeverGauge();trySpawnSpecial(nl-1);
             if(nl===14){triggerEnd('success');return;}
             selected=null;hints=[];render();checkOver();startHint();
         } else if(!tgt){
@@ -717,9 +691,7 @@ function clickCell(r,c){
         if(tgt&&tgt.theme===current.theme&&tgt.level===current.level&&current.level<14){
             const nl=current.level+1;
             grid[r][c]={theme:current.theme,level:nl};
-            score+=calcScore(nl);
-            updatePeakLevel(nl+1); // ✅ level은 0-index → +1로 표시값 갱신
-            addFeverGauge();trySpawnSpecial(nl-1);
+            score+=calcScore(nl);updatePeakLevel(nl+1);addFeverGauge();trySpawnSpecial(nl-1);
             if(nl===14){triggerEnd('success');return;}
             current=random();hints=[];render();checkOver();startHint();
         } else if(!tgt){
@@ -776,16 +748,16 @@ function render(){
         document.getElementById('successTime').textContent=getTimeStr();
     } else if(timedOut){
         document.getElementById('gameTimeoutBox').style.display='block';
-        document.getElementById('timeoutLevel').textContent=peakLevel; // ✅
+        document.getElementById('timeoutLevel').textContent=peakLevel;
         document.getElementById('timeoutScore').textContent=score;
     } else if(ended){
         document.getElementById('gameEndBox').style.display='block';
-        document.getElementById('endLevel').textContent=peakLevel; // ✅
+        document.getElementById('endLevel').textContent=peakLevel;
         document.getElementById('endScore').textContent=score;
     } else if(over){
         document.getElementById('gameOverBox').style.display='block';
         document.getElementById('finalScore').textContent=score;
-        document.getElementById('finalLevel').textContent=peakLevel; // ✅
+        document.getElementById('finalLevel').textContent=peakLevel;
     }
     const g=document.getElementById('grid');g.innerHTML='';
     if(ended||over||success||timedOut)return;
@@ -870,58 +842,11 @@ function resetGame(){
     BGM.restart();
     init();
 }
-
-// ✅ getMaxLevel() 완전 제거 → peakLevel로 통일
-// submitRanking에서도 peakLevel 사용
 async function submitRanking(type){
-    const fm={success:'nameInputFieldSuccess',over:'nameInputFieldOver',timeout:'nameInputFieldTimeout',end:'nameInputFieldEnd'};
-    const bm={success:'submitSuccess',over:'submitOver',timeout:'submitTimeout',end:'submitEnd'};
-    const rm={success:'retryMsgSuccess',over:'retryMsgOver',timeout:'retryMsgTimeout',end:'retryMsgEnd'};
-    const field=document.getElementById(fm[type]),btn=document.getElementById(bm[type]),retry=document.getElementById(rm[type]);
-    const name=field.value.trim();
-    if(!name){alert('닉네임을 입력해주세요!');return;}
-    retry.classList.remove('show');btn.disabled=true;btn.textContent='등록 중...';
-    try{
-        const lv = success ? 15 : peakLevel; // ✅ peakLevel로 저장
-        const ref=await window.db.collection('rankings').add({
-            name, score, time:finalUsedTime, level:lv,
-            timestamp:Date.now(), date:new Date().toISOString()
-        });
-        lastSubmittedId=ref.id;field.value='';retry.classList.remove('show');showRanking();
-    }catch(e){retry.classList.add('show');}
-    finally{btn.disabled=false;btn.textContent='🏆 랭킹 등록';}
+    alert('미리보기 모드에서는 랭킹 등록이 지원되지 않아요!');
 }
-
-async function showRanking(){
-    const content=document.getElementById('rankingContent');
-    content.innerHTML='<div class="loading">불러오는 중...</div>';
+function showRanking(){
     document.getElementById('rankingPopup').classList.add('show');
-    try{
-        const snap=await window.db.collection('rankings')
-            .orderBy('score','desc')
-            .orderBy('level','desc')
-            .orderBy('name','asc')
-            .limit(50).get();
-        const rankings=snap.docs.map(d=>({id:d.id,...d.data()}));
-        const myIndex=lastSubmittedId?rankings.findIndex(r=>r.id===lastSubmittedId):-1;
-        const top10=rankings.slice(0,10);
-        if(!top10.length){content.innerHTML='<p style="text-align:center;padding:20px;color:#666;">아직 등록된 랭킹이 없습니다.</p>';return;}
-        const medals=['🥇','🥈','🥉'];
-        let html='<table class="ranking-table"><thead><tr><th>순위</th><th>닉네임</th><th>레벨</th><th>점수</th></tr></thead><tbody>';
-        top10.forEach((rec,i)=>{
-            const mine=lastSubmittedId&&rec.id===lastSubmittedId;
-            html+=`<tr class="${mine?'my-record':''}"><td class="rank-medal">${medals[i]??i+1}</td><td>${rec.name}</td><td>Lv.${rec.level}</td><td>${rec.score}</td></tr>`;
-        });
-        html+='</tbody></table>';
-        if(myIndex>=10){
-            const rec=rankings[myIndex];
-            html+=`<div style="margin-top:10px;padding:10px;background:#fef3c7;border-radius:8px;text-align:center;font-size:12px;"><b>📍 내 순위: ${myIndex+1}위</b><br>${rec.name} | Lv.${rec.level} | ${rec.score}점</div>`;
-        }
-        content.innerHTML=html;
-    }catch(e){
-        content.innerHTML=`<div style="text-align:center;padding:20px;"><p style="color:#ef4444;font-weight:bold;">랭킹을 불러오지 못했습니다.</p>
-        <button onclick="showRanking()" style="margin-top:12px;padding:8px 20px;background:linear-gradient(to right,#9333ea,#ec4899);color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">🔄 다시 시도</button></div>`;
-    }
 }
 
 document.getElementById('fillBtn').addEventListener('click',fillEmpty);
